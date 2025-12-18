@@ -1,152 +1,205 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scooby Snacks Runner</title>
-<style>
-body, html { margin:0; padding:0; overflow:hidden; background:#000; font-family:Arial,sans-serif; }
-canvas { display:block; margin:auto; background:#222; }
+let player;
+let groundY;
+let gravity = 0.6;
+let jumpForce = -12;
+let obstacles = [];
+let cookies = [];
+let score = 0;
 
-#hud { position:absolute; top:10px; left:10px; color:#fff; font-size:18px; }
-#leaderboard { position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.6); padding:10px; border-radius:8px; width:200px; color:#fff; font-size:14px; }
-#controls { position:absolute; bottom:20px; width:100%; display:flex; justify-content:center; gap:10px; }
-button { width:120px; height:120px; border-radius:50%; border:none; font-size:24px; background:rgba(255,255,255,0.2); color:#fff; touch-action:manipulation; }
-</style>
-</head>
-<body>
+let gameStarted = false;
+let speed = 2; // velocidad inicial muy lenta
 
-<div id="hud">Score: <span id="score">0</span></div>
-<div id="leaderboard"><strong>Leaderboard</strong><ol id="scores"></ol></div>
+// Sonidos (pueden ser reemplazados por tus propios archivos o generadores)
+let jumpSound;
+let cookieSound;
 
-<canvas id="game" width="360" height="640"></canvas>
-
-<div id="controls">
-  <button id="startBtn">START</button>
-  <button id="jumpBtn">JUMP</button>
-</div>
-
-<script>
-/* ===============================
-   VARIABLES
-================================*/
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-
-let score=0, speed=2, gravity=0.6, gameOver=false, gameStarted=false;
-let snacks=[], ghosts=[];
-let lastScoreTime = Date.now();
-
-/* ===============================
-   IMAGES
-================================*/
-const bgImage = new Image();
-bgImage.src="https://cdn.pixabay.com/photo/2022/10/15/14/10/haunted-house-7510053_1280.png";
-
-const scoobyImg = new Image();
-scoobyImg.src="https://www.pngkey.com/png/full/76-760499_download-zip-archive-scooby-doo-sprite-png.png";
-
-const ghostImg = new Image();
-ghostImg.src="https://pngimg.com/uploads/ghost/ghost_PNG46.png";
-
-const cookieImg = new Image();
-cookieImg.src="https://pngimg.com/uploads/cookie/cookie_PNG13656.png";
-
-/* ===============================
-   SCOOBY PLAYER
-================================*/
-const scooby={
-  x:50, y:520, vy:0, width:50, height:50,
-  jump(){ if(this.y>=520) { this.vy=-12; if(!gameStarted) startGame(); jumpSound.play(); } },
-  update(){ this.vy+=gravity; this.y+=this.vy; if(this.y>520){this.y=520;this.vy=0;} },
-  draw(){ ctx.drawImage(scoobyImg,this.x,this.y,this.width,this.height); }
-};
-
-/* ===============================
-   OBJECTS
-================================*/
-function spawnSnack(){ snacks.push({x:canvas.width, y:520, size:30}); }
-function spawnGhost(){ ghosts.push({x:canvas.width, y:520, size:40}); }
-
-/* ===============================
-   SOUNDS
-================================*/
-const jumpSound = new Audio("https://cdn.pixabay.com/download/audio/2022/03/15/audio_6a91a5f8c0.mp3?filename=jump-12348.mp3");
-const crunchSound = new Audio("https://cdn.pixabay.com/download/audio/2021/09/23/audio_0d460e65fe.mp3?filename=crunch-13588.mp3");
-const bgMusic = new Audio("https://cdn.pixabay.com/download/audio/2022/08/22/audio_4cf40fcb21.mp3?filename=spooky-atmosphere-110058.mp3");
-bgMusic.loop=true;
-let musicOn=false;
-
-/* ===============================
-   HUD & CONTROLS
-================================*/
-document.getElementById('jumpBtn').addEventListener('touchstart', e=>{ e.preventDefault(); scooby.jump(); });
-document.addEventListener('keydown', e=>{ if(e.code==='Space') scooby.jump(); });
-
-document.getElementById('startBtn').addEventListener('click', startGame);
-
-function toggleMusic(){
-  musicOn=!musicOn;
-  if(musicOn) bgMusic.play(); else bgMusic.pause();
+function preload() {
+  // Ejemplo de sonidos: p5 tiene loadSound si tienes archivos, aquí solo placeholders
+  jumpSound = loadSound('https://freesound.org/data/previews/331/331912_3248244-lq.mp3');
+  cookieSound = loadSound('https://freesound.org/data/previews/331/331912_3248244-lq.mp3');
 }
 
-/* ===============================
-   GAME LOOP
-================================*/
-function startGame(){
-  gameStarted=true;
-  document.getElementById('startBtn').style.display='none';
-  loop();
+function setup() {
+  createCanvas(600, 400);
+  groundY = height - 50;
+  player = new Player();
+  
+  let jumpBtn = createButton('JUMP');
+  jumpBtn.position(10, 10);
+  jumpBtn.mousePressed(startGame);
 }
 
-function update(){
-  if(gameOver || !gameStarted) return;
+function startGame() {
+  gameStarted = true;
+  player.jump();
+}
 
-  scooby.update();
-  snacks.forEach(s=>s.x-=speed);
-  ghosts.forEach(g=>g.x-=speed);
+function draw() {
+  background(200);
 
-  // Snack collision
-  snacks = snacks.filter(s=>{
-    if(s.x<scooby.x+scooby.width && s.x+s.size>scooby.x && s.y<scooby.y+scooby.height){
-      if(Date.now()-lastScoreTime>100){ score++; lastScoreTime=Date.now(); crunchSound.play(); }
-      return false;
+  // Suelo
+  fill(100);
+  rect(0, groundY, width, height - groundY);
+
+  if (gameStarted) {
+    // Incrementa velocidad lentamente hasta un límite
+    speed = min(speed + 0.001, 6);
+
+    // Obstáculos
+    if (frameCount % 150 === 0) {
+      obstacles.push(new Obstacle());
     }
-    return s.x>-s.size;
-  });
 
-  // Ghost collision
-  ghosts.forEach(g=>{
-    if(g.x<scooby.x+scooby.width && g.x+g.size>scooby.x){
-      gameOver=true;
-      alert("Game Over! Score: "+score);
-      location.reload();
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+      obstacles[i].update();
+      obstacles[i].show();
+
+      if (obstacles[i].hits(player)) {
+        noLoop();
+        fill(255, 0, 0);
+        textSize(32);
+        textAlign(CENTER);
+        text('GAME OVER', width / 2, height / 2);
+      }
+
+      if (obstacles[i].offscreen()) {
+        obstacles.splice(i, 1);
+        score++;
+      }
     }
-  });
 
-  // Spawn objects
-  if(Math.random()<0.02) spawnSnack();
-  if(Math.random()<0.015) spawnGhost();
+    // Galletas
+    if (frameCount % 300 === 0) {
+      cookies.push(new Cookie());
+    }
 
-  // Gradually increase speed
-  speed += 0.001;
+    for (let i = cookies.length - 1; i >= 0; i--) {
+      cookies[i].update();
+      cookies[i].show();
+
+      if (cookies[i].collected(player)) {
+        cookieSound.play();
+        cookies.splice(i, 1);
+        score += 5;
+      } else if (cookies[i].offscreen()) {
+        cookies.splice(i, 1);
+      }
+    }
+  } else {
+    fill(0);
+    textSize(24);
+    textAlign(CENTER);
+    text('Pulsa JUMP para empezar', width / 2, height / 2);
+  }
+
+  player.update();
+  player.show();
+
+  fill(0);
+  textSize(16);
+  textAlign(LEFT);
+  text('Score: ' + score, 10, 40);
 }
 
-function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.drawImage(bgImage,0,0,canvas.width,canvas.height);
-  scooby.draw();
-  snacks.forEach(s=>ctx.drawImage(cookieImg,s.x,s.y,s.size,s.size));
-  ghosts.forEach(g=>ctx.drawImage(ghostImg,g.x,g.y,g.size,g.size));
-  document.getElementById('score').innerText = score;
+// --------------------- Clases ---------------------
+
+class Player {
+  constructor() {
+    this.x = 50;
+    this.y = groundY;
+    this.size = 40;
+    this.ySpeed = 0;
+    this.onGround = true;
+  }
+
+  jump() {
+    if (this.onGround) {
+      this.ySpeed = jumpForce;
+      this.onGround = false;
+      jumpSound.play();
+    }
+  }
+
+  update() {
+    this.ySpeed += gravity;
+    this.y += this.ySpeed;
+
+    if (this.y > groundY) {
+      this.y = groundY;
+      this.ySpeed = 0;
+      this.onGround = true;
+    }
+  }
+
+  show() {
+    fill(255, 100, 100);
+    rect(this.x, this.y - this.size, this.size, this.size);
+  }
 }
 
-function loop(){
-  update();
-  draw();
-  if(!gameOver) requestAnimationFrame(loop);
-}
-</script>
+class Obstacle {
+  constructor() {
+    this.x = width;
+    this.y = groundY;
+    this.size = 40;
+  }
 
-</body>
-</html>
+  update() {
+    this.x -= speed;
+  }
+
+  show() {
+    fill(0);
+    rect(this.x, this.y - this.size, this.size, this.size);
+  }
+
+  hits(player) {
+    return (
+      player.x < this.x + this.size &&
+      player.x + player.size > this.x &&
+      player.y > this.y - this.size
+    );
+  }
+
+  offscreen() {
+    return this.x + this.size < 0;
+  }
+}
+
+class Cookie {
+  constructor() {
+    this.x = width;
+    this.y = groundY - 20;
+    this.size = 20;
+  }
+
+  update() {
+    this.x -= speed;
+  }
+
+  show() {
+    fill(255, 200, 0);
+    ellipse(this.x + this.size / 2, this.y - this.size / 2, this.size);
+  }
+
+  collected(player) {
+    return (
+      player.x < this.x + this.size &&
+      player.x + player.size > this.x &&
+      player.y > this.y - this.size &&
+      player.y < this.y + this.size
+    );
+  }
+
+  offscreen() {
+    return this.x + this.size < 0;
+  }
+}
+
+// --------------------- Control con teclado ---------------------
+function keyPressed() {
+  if (key === ' ' || keyCode === UP_ARROW) {
+    if (!gameStarted) startGame();
+    else player.jump();
+  }
+}
