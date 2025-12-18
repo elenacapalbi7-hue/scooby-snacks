@@ -1,205 +1,153 @@
-let player;
-let groundY;
-let gravity = 0.6;
-let jumpForce = -12;
-let obstacles = [];
-let cookies = [];
-let score = 0;
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Juego Runner Simple</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #eee;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background: #ccc;
+    }
+    #jumpBtn {
+      padding: 10px 20px;
+      font-size: 20px;
+      margin: 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <button id="jumpBtn">JUMP</button>
+  <script>
+    // --- Variables ---
+    let canvasWidth = 600;
+    let canvasHeight = 400;
+    let player, obstacles = [];
+    let groundY = canvasHeight - 50;
+    let gravity = 0.6;
+    let jumpForce = -12;
+    let gameStarted = false;
+    let speed = 2; // velocidad inicial muy lenta
+    let score = 0;
 
-let gameStarted = false;
-let speed = 2; // velocidad inicial muy lenta
+    // --- Setup ---
+    const canvas = document.createElement('canvas');
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    document.body.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
 
-// Sonidos (pueden ser reemplazados por tus propios archivos o generadores)
-let jumpSound;
-let cookieSound;
+    player = {
+      x: 50,
+      y: groundY,
+      size: 40,
+      ySpeed: 0,
+      onGround: true,
+      color: '#8B4513' // marrón
+    };
 
-function preload() {
-  // Ejemplo de sonidos: p5 tiene loadSound si tienes archivos, aquí solo placeholders
-  jumpSound = loadSound('https://freesound.org/data/previews/331/331912_3248244-lq.mp3');
-  cookieSound = loadSound('https://freesound.org/data/previews/331/331912_3248244-lq.mp3');
-}
+    document.getElementById('jumpBtn').addEventListener('click', () => {
+      if (!gameStarted) gameStarted = true;
+      playerJump();
+    });
 
-function setup() {
-  createCanvas(600, 400);
-  groundY = height - 50;
-  player = new Player();
-  
-  let jumpBtn = createButton('JUMP');
-  jumpBtn.position(10, 10);
-  jumpBtn.mousePressed(startGame);
-}
+    document.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'ArrowUp') {
+        if (!gameStarted) gameStarted = true;
+        playerJump();
+      }
+    });
 
-function startGame() {
-  gameStarted = true;
-  player.jump();
-}
-
-function draw() {
-  background(200);
-
-  // Suelo
-  fill(100);
-  rect(0, groundY, width, height - groundY);
-
-  if (gameStarted) {
-    // Incrementa velocidad lentamente hasta un límite
-    speed = min(speed + 0.001, 6);
-
-    // Obstáculos
-    if (frameCount % 150 === 0) {
-      obstacles.push(new Obstacle());
+    // --- Funciones ---
+    function playerJump() {
+      if (player.onGround) {
+        player.ySpeed = jumpForce;
+        player.onGround = false;
+      }
     }
 
-    for (let i = obstacles.length - 1; i >= 0; i--) {
-      obstacles[i].update();
-      obstacles[i].show();
+    function spawnObstacle() {
+      obstacles.push({
+        x: canvasWidth,
+        y: groundY,
+        size: 40,
+        color: '#FF0000' // rojo
+      });
+    }
 
-      if (obstacles[i].hits(player)) {
-        noLoop();
-        fill(255, 0, 0);
-        textSize(32);
-        textAlign(CENTER);
-        text('GAME OVER', width / 2, height / 2);
-      }
+    function update() {
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-      if (obstacles[i].offscreen()) {
-        obstacles.splice(i, 1);
+      // Suelo
+      ctx.fillStyle = '#444';
+      ctx.fillRect(0, groundY, canvasWidth, canvasHeight - groundY);
+
+      if (gameStarted) {
+        // Obstáculos
+        if (Math.random() < 0.01) spawnObstacle();
+
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          obstacles[i].x -= speed;
+          ctx.fillStyle = obstacles[i].color;
+          ctx.fillRect(obstacles[i].x, obstacles[i].y - obstacles[i].size, obstacles[i].size, obstacles[i].size);
+
+          // Colisión
+          if (
+            player.x < obstacles[i].x + obstacles[i].size &&
+            player.x + player.size > obstacles[i].x &&
+            player.y > obstacles[i].y - obstacles[i].size
+          ) {
+            gameStarted = false;
+            obstacles = [];
+            player.y = groundY;
+            player.ySpeed = 0;
+            score = 0;
+          }
+
+          // Limpiar obstáculos fuera de pantalla
+          if (obstacles[i].x + obstacles[i].size < 0) obstacles.splice(i, 1);
+        }
+
+        // Actualizar jugador
+        player.ySpeed += gravity;
+        player.y += player.ySpeed;
+        if (player.y > groundY) {
+          player.y = groundY;
+          player.ySpeed = 0;
+          player.onGround = true;
+        }
+
+        // Score
         score++;
+      } else {
+        // Mensaje de espera
+        ctx.fillStyle = '#000';
+        ctx.font = '24px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Toca JUMP para empezar', canvasWidth / 2, canvasHeight / 2);
       }
+
+      // Dibujar jugador
+      ctx.fillStyle = player.color;
+      ctx.fillRect(player.x, player.y - player.size, player.size, player.size);
+
+      // Dibujar score
+      ctx.fillStyle = '#000';
+      ctx.font = '16px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText('Score: ' + score, 10, 30);
+
+      requestAnimationFrame(update);
     }
 
-    // Galletas
-    if (frameCount % 300 === 0) {
-      cookies.push(new Cookie());
-    }
-
-    for (let i = cookies.length - 1; i >= 0; i--) {
-      cookies[i].update();
-      cookies[i].show();
-
-      if (cookies[i].collected(player)) {
-        cookieSound.play();
-        cookies.splice(i, 1);
-        score += 5;
-      } else if (cookies[i].offscreen()) {
-        cookies.splice(i, 1);
-      }
-    }
-  } else {
-    fill(0);
-    textSize(24);
-    textAlign(CENTER);
-    text('Pulsa JUMP para empezar', width / 2, height / 2);
-  }
-
-  player.update();
-  player.show();
-
-  fill(0);
-  textSize(16);
-  textAlign(LEFT);
-  text('Score: ' + score, 10, 40);
-}
-
-// --------------------- Clases ---------------------
-
-class Player {
-  constructor() {
-    this.x = 50;
-    this.y = groundY;
-    this.size = 40;
-    this.ySpeed = 0;
-    this.onGround = true;
-  }
-
-  jump() {
-    if (this.onGround) {
-      this.ySpeed = jumpForce;
-      this.onGround = false;
-      jumpSound.play();
-    }
-  }
-
-  update() {
-    this.ySpeed += gravity;
-    this.y += this.ySpeed;
-
-    if (this.y > groundY) {
-      this.y = groundY;
-      this.ySpeed = 0;
-      this.onGround = true;
-    }
-  }
-
-  show() {
-    fill(255, 100, 100);
-    rect(this.x, this.y - this.size, this.size, this.size);
-  }
-}
-
-class Obstacle {
-  constructor() {
-    this.x = width;
-    this.y = groundY;
-    this.size = 40;
-  }
-
-  update() {
-    this.x -= speed;
-  }
-
-  show() {
-    fill(0);
-    rect(this.x, this.y - this.size, this.size, this.size);
-  }
-
-  hits(player) {
-    return (
-      player.x < this.x + this.size &&
-      player.x + player.size > this.x &&
-      player.y > this.y - this.size
-    );
-  }
-
-  offscreen() {
-    return this.x + this.size < 0;
-  }
-}
-
-class Cookie {
-  constructor() {
-    this.x = width;
-    this.y = groundY - 20;
-    this.size = 20;
-  }
-
-  update() {
-    this.x -= speed;
-  }
-
-  show() {
-    fill(255, 200, 0);
-    ellipse(this.x + this.size / 2, this.y - this.size / 2, this.size);
-  }
-
-  collected(player) {
-    return (
-      player.x < this.x + this.size &&
-      player.x + player.size > this.x &&
-      player.y > this.y - this.size &&
-      player.y < this.y + this.size
-    );
-  }
-
-  offscreen() {
-    return this.x + this.size < 0;
-  }
-}
-
-// --------------------- Control con teclado ---------------------
-function keyPressed() {
-  if (key === ' ' || keyCode === UP_ARROW) {
-    if (!gameStarted) startGame();
-    else player.jump();
-  }
-}
+    update();
+  </script>
+</body>
+</html>
