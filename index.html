@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Scooby Snacks Runner</title>
+
+<!-- PWA -->
+<link rel="manifest" href="data:application/json,{
+  &quot;name&quot;:&quot;Scooby Snacks Runner&quot;,
+  &quot;short_name&quot;:&quot;ScoobyRun&quot;,
+  &quot;start_url&quot;:&quot;.&quot;,
+  &quot;display&quot;:&quot;standalone&quot;,
+  &quot;background_color&quot;:&quot;#000&quot;,
+  &quot;theme_color&quot;:&quot;#4b0082&quot;
+}">
+<meta name="theme-color" content="#4b0082">
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #000;
+  font-family: Arial, sans-serif;
+  color: white;
+  overflow: hidden;
+}
+canvas {
+  display: block;
+  margin: auto;
+  background: linear-gradient(#1b1b3a, #000);
+}
+
+/* HUD */
+#hud {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 18px;
+  z-index: 10;
+}
+
+/* Mobile Controls */
+#controls {
+  position: absolute;
+  bottom: 20px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  z-index: 20;
+}
+button {
+  width: 120px;
+  height: 120px;
+  font-size: 24px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.2);
+  color: white;
+}
+
+/* Leaderboard */
+#leaderboard {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  background: rgba(0,0,0,0.6);
+  padding: 10px;
+  border-radius: 8px;
+  max-width: 200px;
+  font-size: 14px;
+}
+</style>
+</head>
+
+<body>
+<div id="hud">Puntos: <span id="score">0</span></div>
+
+<div id="leaderboard">
+<strong>Leaderboard (Demo)</strong>
+<ol id="scores"></ol>
+</div>
+
+<canvas id="game" width="360" height="640"></canvas>
+
+<div id="controls">
+  <button id="jumpBtn">SALTAR</button>
+</div>
+
+<script>
+/* =======================
+   CONFIGURACIÓN
+======================= */
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let score = 0;
+let speed = 4;
+let gravity = 0.6;
+let gameOver = false;
+
+/* Anti-cheat básico */
+let lastScoreTime = Date.now();
+
+/* =======================
+   SCOOBY
+======================= */
+const scooby = {
+  x: 50,
+  y: 520,
+  w: 50,
+  h: 50,
+  vy: 0,
+  jump() {
+    if (this.y >= 520) this.vy = -12;
+  },
+  update() {
+    this.vy += gravity;
+    this.y += this.vy;
+    if (this.y > 520) {
+      this.y = 520;
+      this.vy = 0;
+    }
+  },
+  draw() {
+    ctx.fillStyle = "#8b4513";
+    ctx.fillRect(this.x, this.y, this.w, this.h);
+  }
+};
+
+/* =======================
+   OBJETOS
+======================= */
+let snacks = [];
+let ghosts = [];
+
+function spawnSnack() {
+  snacks.push({ x: 360, y: 520, size: 20 });
+}
+function spawnGhost() {
+  ghosts.push({ x: 360, y: 520, size: 40 });
+}
+
+/* =======================
+   LEADERBOARD (LOCAL DEMO)
+======================= */
+function saveScore(s) {
+  let scores = JSON.parse(localStorage.getItem("scores") || "[]");
+  scores.push(s);
+  scores.sort((a,b)=>b-a);
+  scores = scores.slice(0,5);
+  localStorage.setItem("scores", JSON.stringify(scores));
+}
+
+function renderScores() {
+  let scores = JSON.parse(localStorage.getItem("scores") || "[]");
+  document.getElementById("scores").innerHTML =
+    scores.map(s=>`<li>${s}</li>`).join("");
+}
+renderScores();
+
+/* =======================
+   INPUT
+======================= */
+document.getElementById("jumpBtn").addEventListener("touchstart", e => {
+  e.preventDefault();
+  scooby.jump();
+});
+document.addEventListener("keydown", e => {
+  if (e.code === "Space") scooby.jump();
+});
+
+/* =======================
+   GAME LOOP
+======================= */
+function update() {
+  if (gameOver) return;
+
+  scooby.update();
+
+  snacks.forEach(s => s.x -= speed);
+  ghosts.forEach(g => g.x -= speed);
+
+  // Colisiones snacks
+  snacks = snacks.filter(s => {
+    if (s.x < scooby.x + scooby.w &&
+        s.x + s.size > scooby.x &&
+        s.y < scooby.y + scooby.h) {
+      // Anti-cheat (velocidad máxima de score)
+      let now = Date.now();
+      if (now - lastScoreTime > 100) {
+        score++;
+        lastScoreTime = now;
+      }
+      return false;
+    }
+    return s.x > -20;
+  });
+
+  // Colisiones fantasmas
+  ghosts.forEach(g => {
+    if (g.x < scooby.x + scooby.w &&
+        g.x + g.size > scooby.x &&
+        g.y < scooby.y + scooby.h) {
+      gameOver = true;
+      saveScore(score);
+      renderScores();
+      alert("👻 ¡Te atraparon! Puntos: " + score);
+      location.reload();
+    }
+  });
+
+  if (Math.random() < 0.02) spawnSnack();
+  if (Math.random() < 0.015) spawnGhost();
+}
+
+function draw() {
+  ctx.clearRect(0,0,360,640);
+
+  // Suelo
+  ctx.fillStyle = "#222";
+  ctx.fillRect(0,570,360,70);
+
+  scooby.draw();
+
+  ctx.fillStyle = "#f5deb3";
+  snacks.forEach(s => ctx.fillRect(s.x, s.y, s.size, s.size));
+
+  ctx.fillStyle = "#aaa";
+  ghosts.forEach(g => ctx.fillRect(g.x, g.y, g.size, g.size));
+
+  document.getElementById("score").innerText = score;
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+
+/* =======================
+   SERVICE WORKER INLINE
+======================= */
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    self.addEventListener('install', e => self.skipWaiting());
+    self.addEventListener('fetch', e => {
+      e.respondWith(fetch(e.request).catch(()=>new Response('Offline')));
+    });
+  `;
+  const blob = new Blob([swCode], {type:'text/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(blob));
+}
+</script>
+</body>
+  </html>
+  
