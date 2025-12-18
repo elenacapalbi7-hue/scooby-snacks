@@ -3,38 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Scooby Level-Up: Multiverse</title>
+    <title>Scooby Level-Up: Pro Edition</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Arial', sans-serif; touch-action: none; color: white; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; touch-action: none; color: white; }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
-        canvas { background: #111; max-width: 100%; max-height: 100%; border: 4px solid #ccff00; box-shadow: 0 0 30px rgba(204, 255, 0, 0.4); }
-        #ui { position: absolute; top: 15px; width: 90%; display: flex; justify-content: space-between; color: #ccff00; font-size: 18px; font-weight: bold; z-index: 100; text-shadow: 2px 2px #000; pointer-events: none; }
+        canvas { background: #111; max-width: 100%; max-height: 100%; border: 3px solid #ccff00; }
+        #ui { position: absolute; top: 10px; width: 95%; display: flex; justify-content: space-between; color: #ccff00; font-size: 16px; font-weight: bold; z-index: 100; pointer-events: none; }
         .menu { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; text-align: center; }
-        .btn-main { padding: 15px 40px; font-size: 22px; background: #ccff00; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; color: black; box-shadow: 0 5px 0 #88aa00; }
-        .btn-main:active { transform: translateY(4px); box-shadow: none; }
+        .btn-main { padding: 20px 50px; font-size: 24px; background: #ccff00; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; color: black; }
         .hidden { display: none !important; }
-        #level-tag { position: absolute; top: 50px; left: 50%; transform: translateX(-50%); background: rgba(204, 255, 0, 0.8); color: black; padding: 5px 20px; border-radius: 20px; font-size: 14px; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div id="game-container">
         <div id="ui">
+            <div>MODO: <span id="modeName">ESPERANDO</span></div>
             <div>GALLETAS: <span id="sc">0</span></div>
-            <div>MEJOR: <span id="topSc">0</span></div>
+            <div>TOP: <span id="topSc">0</span></div>
         </div>
-        <div id="level-tag">MODO: <span id="modeName">INICIO</span></div>
 
         <div id="mainMenu" class="menu">
             <h1 style="color:#ccff00; font-size: 40px;">SCOOBY LEVEL-UP</h1>
-            <p>¡CADA 10 GALLETAS UN JUEGO NUEVO!</p>
-            <button class="btn-main" onclick="startGame()">INICIAR TORNEO</button>
+            <p>TOCA PARA SALTAR AL INSTANTE</p>
+            <button class="btn-main" id="startBtn">INICIAR TORNEO</button>
         </div>
 
         <div id="deathMenu" class="menu hidden">
-            <h1 style="color:red; font-size: 40px;">¡GAME OVER!</h1>
-            <h2 id="finalScore" style="font-size: 60px;">0</h2>
-            <button class="btn-main" onclick="startGame()">REINTENTAR</button>
+            <h1 style="color:red;">¡GAME OVER!</h1>
+            <h2 id="finalScore" style="font-size: 50px;">0</h2>
+            <button class="btn-main" id="restartBtn">REINTENTAR</button>
         </div>
 
         <canvas id="c"></canvas>
@@ -45,33 +43,58 @@
         const ctx = canvas.getContext('2d');
         canvas.width = 800; canvas.height = 450;
 
-        // Imágenes
+        // Carga de recursos
         const imgS = new Image(); imgS.src = '4d0e8e93e8663b020f6063451e53118a.png';
         const imgG = new Image(); imgG.src = 'eb4380a3cf64873dc0ebbad595d0886f.png';
         const imgB = new Image(); imgB.src = '1766045750713.png';
         const imgF = new Image(); imgF.src = '535eb96ca41945fbcd1774e60989d8e3.png';
-        
-        // Sonidos
         const sndJ = new Audio('audio saltoo.mp4');
         const sndE = new Audio('audio galletaa.mp4');
         const bgM = new Audio('DanLebowitzTiptoeOuttheBack.mp4'); bgM.loop = true;
 
-        let score = 0, level = 1, speed = 7, active = false, frame = 0, gravity = 0.8;
+        let score = 0, level = 1, speed = 7, active = false, frame = 0, gravity = 0.9;
         let scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0, angle: 0 };
         let obs = [], snacks = [], platforms = [], bgX = 0;
 
-        let high = localStorage.getItem('scooby_top') || 0;
-        document.getElementById('topSc').innerText = high;
+        document.getElementById('topSc').innerText = localStorage.getItem('scooby_top') || 0;
 
         function startGame() {
             active = true; score = 0; level = 1; speed = 7; obs = []; snacks = []; platforms = []; frame = 0;
-            scooby.y = 330; scooby.dy = 0; scooby.jumps = 0; scooby.angle = 0; gravity = 0.8;
-            document.getElementById('sc').innerText = "0";
+            scooby.y = 330; scooby.dy = 0; scooby.jumps = 0; gravity = 0.9;
             document.getElementById('mainMenu').classList.add('hidden');
             document.getElementById('deathMenu').classList.add('hidden');
             bgM.play().catch(()=>{});
-            animate();
+            requestAnimationFrame(animate);
         }
+
+        // --- EL TRUCO DEL SALTO INSTANTÁNEO ---
+        function saltar() {
+            if(!active) return;
+            
+            // Sonido inmediato
+            sndJ.currentTime = 0; 
+            sndJ.play().catch(()=>{});
+
+            if (level === 3) { // Modo Flappy
+                scooby.dy = -11;
+            } else if (level === 4) { // Modo Gravedad
+                gravity = -gravity;
+                scooby.dy = gravity * 14;
+            } else { // Modo Clásico y Mario
+                if(scooby.jumps < 2) {
+                    scooby.dy = -18;
+                    scooby.jumps++;
+                }
+            }
+        }
+
+        // Captura el toque antes que cualquier otra cosa
+        window.addEventListener('pointerdown', (e) => {
+            if(e.target.tagName !== 'BUTTON') {
+                e.preventDefault();
+                saltar();
+            }
+        }, {passive: false});
 
         function animate() {
             if (!active) return;
@@ -80,26 +103,22 @@
             bgX -= (speed/2); if(bgX <= -800) bgX = 0;
             ctx.drawImage(imgB, bgX, 0, 800, 450); ctx.drawImage(imgB, bgX+800, 0, 800, 450);
 
-            // --- CAMBIO DE JUEGOS POR NIVEL ---
-            
-            if (level === 1) { // MODO CLÁSICO
+            // Mecánicas por nivel
+            if (level === 1) {
                 document.getElementById('modeName').innerText = "CLÁSICO";
                 scooby.dy += gravity;
                 if(scooby.y > 330) { scooby.y = 330; scooby.dy = 0; scooby.jumps = 0; }
-            } 
-            else if (level === 2) { // MODO MARIO (Plataformas y Vacío)
+            } else if (level === 2) {
                 document.getElementById('modeName').innerText = "MARIO STYLE";
                 scooby.dy += gravity;
-                if(frame % 90 === 0) platforms.push({x: 800, y: 250, w: 200, h: 30});
-                if(scooby.y > 450) endGame(); // Caer al vacío
-            } 
-            else if (level === 3) { // MODO GEOMETRY (Nave / Flappy)
-                document.getElementById('modeName').innerText = "FLAPPY SCOOBY";
-                scooby.dy += 0.5; // Gravedad suave
-                if(scooby.y < 0 || scooby.y > 380) endGame();
-                if(frame % 60 === 0) obs.push({x: 800, y: 0, w: 50, h: 150}, {x: 800, y: 300, w: 50, h: 150});
-            } 
-            else { // MODO EXPERTO (Inversión de Gravedad)
+                if(frame % 100 === 0) platforms.push({x: 800, y: 260, w: 180, h: 25});
+                if(scooby.y > 450) endGame();
+            } else if (level === 3) {
+                document.getElementById('modeName').innerText = "FLAPPY MODE";
+                scooby.dy += 0.6;
+                if(scooby.y < -50 || scooby.y > 450) endGame();
+                if(frame % 70 === 0) obs.push({x: 800, y: 0, w: 50, h: 140}, {x: 800, y: 310, w: 50, h: 140});
+            } else {
                 document.getElementById('modeName').innerText = "GRAVEDAD X";
                 scooby.dy += gravity;
                 if(scooby.y < 0) { scooby.y = 0; scooby.dy = 0; scooby.jumps = 0; }
@@ -108,79 +127,32 @@
 
             scooby.y += scooby.dy;
 
-            // Dibujar Scooby con giro
+            // Dibujar Scooby con rotación
             ctx.save();
             ctx.translate(scooby.x + scooby.w/2, scooby.y + scooby.h/2);
-            if(scooby.jumps > 0 || level === 3) scooby.angle += 0.15; else scooby.angle = 0;
+            if(scooby.jumps > 0 || level >= 3) scooby.angle += 0.15; else scooby.angle = 0;
             ctx.rotate(scooby.angle);
             ctx.drawImage(imgS, -scooby.w/2, -scooby.h/2, scooby.w, scooby.h);
             ctx.restore();
 
             // Plataformas
-            platforms.forEach((p, i) => {
+            platforms.forEach((p) => {
                 p.x -= speed;
-                ctx.fillStyle = "#8B4513";
-                ctx.fillRect(p.x, p.y, p.w, p.h);
-                if(scooby.dy > 0 && scooby.x < p.x+p.w && scooby.x+scooby.w > p.x && scooby.y+scooby.h > p.y && scooby.y+scooby.h < p.y+25) {
+                ctx.fillStyle = "#ccff00"; ctx.fillRect(p.x, p.y, p.w, p.h);
+                if(scooby.dy > 0 && scooby.x < p.x+p.w && scooby.x+scooby.w > p.x && scooby.y+scooby.h > p.y && scooby.y+scooby.h < p.y+30) {
                     scooby.y = p.y - scooby.h; scooby.dy = 0; scooby.jumps = 0;
                 }
             });
 
             // Obstáculos
-            if(frame % 100 === 0 && level !== 3) obs.push({x: 800, y: 330, w: 60, h: 60});
-            obs.forEach((o, i) => {
+            if(frame % 110 === 0 && level !== 3) obs.push({x: 800, y: 335, w: 60, h: 60});
+            obs.forEach((o) => {
                 o.x -= (speed + 2);
                 ctx.drawImage(imgF, o.x, o.y, o.w, o.h);
-                if(scooby.x+15 < o.x+o.w-15 && scooby.x+scooby.w-15 > o.x+15 && scooby.y+15 < o.y+o.h-15 && scooby.y+scooby.h-15 > o.y+15) endGame();
+                if(scooby.x+20 < o.x+40 && scooby.x+55 > o.x+20 && scooby.y+20 < o.y+40 && scooby.y+55 > o.y+20) endGame();
             });
 
             // Galletas
-            if(frame % 80 === 0) snacks.push({x: 800, y: 150 + Math.random()*150, w: 45, h: 45});
+            if(frame % 90 === 0) snacks.push({x: 800, y: 150 + Math.random()*180, w: 45, h: 45});
             for(let i=snacks.length-1; i>=0; i--){
-                let s = snacks[i]; s.x -= speed;
-                ctx.drawImage(imgG, s.x, s.y, s.w, s.h);
-                if(scooby.x < s.x+40 && scooby.x+60 > s.x && scooby.y < s.y+40 && scooby.y+60 > s.y) {
-                    snacks.splice(i,1); score++; sndE.currentTime=0; sndE.play().catch(()=>{});
-                    document.getElementById('sc').innerText = score;
-                    if(score % 10 === 0) { 
-                        level++; 
-                        speed += 1.5;
-                        if(level === 4) gravity = -gravity; // Cambio de gravedad final
-                    }
-                }
-            }
-
-            frame++;
-            requestAnimationFrame(animate);
-        }
-
-        function endGame() {
-            active = false; bgM.pause();
-            let top = localStorage.getItem('scooby_top') || 0;
-            if(score > top) { localStorage.setItem('scooby_top', score); top = score; }
-            document.getElementById('topSc').innerText = top;
-            document.getElementById('finalScore').innerText = score;
-            document.getElementById('deathMenu').classList.remove('hidden');
-        }
-
-        window.addEventListener('pointerdown', (e) => {
-            if(!active || e.target.tagName === 'BUTTON') return;
-            
-            // MECÁNICAS DE SALTO POR JUEGO
-            if(level === 3) { // Modo Nave/Flappy
-                scooby.dy = -10;
-            } else if(level === 4) { // Modo Gravedad Invertida
-                gravity = -gravity;
-                scooby.dy = gravity * 15;
-                scooby.jumps = 1;
-            } else { // Modo Normal y Mario
-                if(scooby.jumps < 2) {
-                    scooby.dy = -17;
-                    scooby.jumps++;
-                    sndJ.currentTime = 0; sndJ.play().catch(()=>{});
-                }
-            }
-        });
-    </script>
-</body>
-</html>
+                let s = snacks[i]; s.x -= speed; ctx.drawImage(imgG, s.x, s.y, s.w, s.
