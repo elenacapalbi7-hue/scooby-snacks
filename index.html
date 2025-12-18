@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Scooby Dash - Tournament Edition</title>
+    <title>Scooby-Doo Infinite World</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; touch-action: none; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; touch-action: none; }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
-        canvas { background: #111; max-width: 100%; max-height: 100%; object-fit: contain; border: 3px solid #ccff00; }
-        #ui { position: absolute; top: 15px; width: 90%; display: flex; justify-content: space-between; color: #ccff00; font-size: 16px; text-shadow: 2px 2px #000; pointer-events: none; z-index: 10; }
-        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; text-align: center; color: white; }
-        button { padding: 18px 45px; font-size: 22px; font-weight: bold; background: #ccff00; border: none; border-radius: 40px; cursor: pointer; color: #000; box-shadow: 0 0 20px #ccff00; margin-top: 20px; }
+        canvas { background: #111; max-width: 100%; max-height: 100%; object-fit: contain; border: 2px solid #ccff00; }
+        #ui { position: absolute; top: 15px; width: 90%; display: flex; justify-content: space-between; color: #ccff00; font-size: 18px; text-shadow: 2px 2px #000; pointer-events: none; z-index: 10; }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; }
+        button { padding: 18px 45px; font-size: 22px; font-weight: bold; background: #ccff00; border: none; border-radius: 40px; cursor: pointer; color: #000; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -19,22 +19,17 @@
     <div id="game-container">
         <div id="ui">
             <div>NIVEL: <span id="level">1</span></div>
-            <div>GALLETAS: <span id="score">0</span></div>
+            <div>SNACKS: <span id="score">0</span></div>
             <div>TOP: <span id="bestScore">0</span></div>
         </div>
-
         <div id="startMenu" class="overlay">
-            <h1 style="color:#ccff00; margin-bottom: 5px;">SCOOBY DASH</h1>
-            <p>RECOLECTA 10 PARA SUBIR DE NIVEL</p>
-            <button id="startBtn">INICIAR TORNEO</button>
+            <h1 style="color:#ccff00">SORTEO SEMANAL: SCOOBY RUN</h1>
+            <button id="startBtn">EMPEZAR DESAFÍO</button>
         </div>
-
         <div id="gameOver" class="overlay hidden">
-            <h1 style="color:red">¡INTÉNTALO DE NUEVO!</h1>
-            <p id="finalScore"></p>
-            <button id="retryBtn">REINTENTAR</button>
+            <h1 style="color:red">¡FIN DEL JUEGO!</h1>
+            <button id="retryBtn">VOLVER A INTENTAR</button>
         </div>
-
         <canvas id="gameCanvas"></canvas>
     </div>
 
@@ -43,7 +38,6 @@
         const ctx = canvas.getContext('2d');
         canvas.width = 800; canvas.height = 450;
 
-        // Carga de Archivos
         const imgScooby = new Image(); imgScooby.src = '4d0e8e93e8663b020f6063451e53118a.png';
         const imgSnack = new Image(); imgSnack.src = 'eb4380a3cf64873dc0ebbad595d0886f.png';
         const imgBg = new Image(); imgBg.src = '1766045750713.png';
@@ -59,23 +53,22 @@
         document.getElementById('bestScore').innerText = highStore;
         
         let bgX = 0, obstacles = [], snacks = [], platforms = [];
-        let scooby = { x: 80, y: 335, w: 80, h: 80, dy: 0, gravity: 0.8, jumpPower: -17, inverted: false };
+        let scooby = { x: 80, y: 335, w: 80, h: 80, dy: 0, gravity: 0.8, jumpPower: -17, jumps: 0 };
 
         function update() {
             if (!gameActive) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
+            // Fondo dinámico según velocidad
             bgX -= (gameSpeed - 1);
             if (bgX <= -canvas.width) bgX = 0;
             ctx.drawImage(imgBg, bgX, 0, canvas.width, canvas.height);
             ctx.drawImage(imgBg, bgX + canvas.width, 0, canvas.width, canvas.height);
 
-            // Mecánicas por Nivel
-            if (level === 4) { 
-                scooby.gravity = scooby.inverted ? -0.8 : 0.8;
-            } else if (level >= 5) {
-                scooby.gravity = 0.5;
-                scooby.jumpPower = -10;
+            // --- FÍSICA SEGÚN MODO DE JUEGO (Nivel 4+ es modo vuelo) ---
+            if (level >= 4 && level <= 5) {
+                scooby.gravity = 0.4;
+                scooby.jumpPower = -8;
             } else {
                 scooby.gravity = 0.8;
                 scooby.jumpPower = -17;
@@ -84,54 +77,58 @@
             scooby.dy += scooby.gravity;
             scooby.y += scooby.dy;
 
-            if (scooby.y > 335) { scooby.y = 335; scooby.dy = 0; }
+            // Limites de pantalla
+            if (scooby.y > 335) { scooby.y = 335; scooby.dy = 0; scooby.jumps = 0; }
             if (scooby.y < 0) { scooby.y = 0; scooby.dy = 0; }
             
             ctx.drawImage(imgScooby, scooby.x, scooby.y, scooby.w, scooby.h);
 
-            // Plataformas (Nivel 3+)
-            if (level >= 3 && frame % 150 === 0) {
-                platforms.push({ x: canvas.width, y: 180 + Math.random() * 120, w: 160, h: 20 });
+            // --- OBSTÁCULOS Y PLATAFORMAS (Lógica Mario Intercalada) ---
+            if (level % 2 === 0 && frame % 160 === 0) {
+                platforms.push({ x: canvas.width, y: 200 + Math.random() * 100, w: 120 + Math.random() * 100, h: 20 });
             }
-            for (let i = platforms.length - 1; i >= 0; i--) {
-                let p = platforms[i];
+
+            platforms.forEach((p, i) => {
                 p.x -= gameSpeed;
-                ctx.fillStyle = "#ccff00";
+                ctx.fillStyle = "#8B4513";
                 ctx.fillRect(p.x, p.y, p.w, p.h);
-                if (scooby.dy > 0 && scooby.x + 20 < p.x + p.w && scooby.x + scooby.w - 20 > p.x && scooby.y + scooby.h > p.y && scooby.y + scooby.h < p.y + 20) {
-                    scooby.y = p.y - scooby.h; scooby.dy = 0;
+                if (scooby.dy > 0 && scooby.x + 20 < p.x + p.w && scooby.x + scooby.w - 20 > p.x && scooby.y + scooby.h > p.y && scooby.y + scooby.h < p.y + 25) {
+                    scooby.y = p.y - scooby.h; scooby.dy = 0; scooby.jumps = 0;
                 }
-                if (p.x < -200) platforms.splice(i, 1);
-            }
+                if (p.x < -p.w) platforms.splice(i, 1);
+            });
 
-            // Fantasmas
-            if (frame % Math.max(35, 130 - (level * 8)) === 0) {
-                let gY = (level >= 5) ? Math.random() * 320 : 345;
-                obstacles.push({ x: canvas.width, y: gY, w: 60, h: 60 });
-            }
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                let o = obstacles[i];
-                o.x -= (gameSpeed + 2);
-                ctx.drawImage(imgGhost, o.x, o.y, o.w, o.h);
-                if (scooby.x + 25 < o.x + o.w && scooby.x + scooby.w - 25 > o.x && scooby.y + 25 < o.y + o.h && scooby.y + scooby.h - 25 > o.y) endGame();
-                if (o.x < -100) obstacles.splice(i, 1);
-            }
+            // Fantasmas (Más difíciles en nivel 3+)
+            let ghostFreq = Math.max(40, 140 - (level * 8));
+            if (frame % ghostFreq === 0) obstacles.push({ x: canvas.width, y: (level >= 4) ? Math.random() * 350 : 345, w: 60, h: 60 });
+            
+            obstacles.forEach((obs, i) => {
+                obs.x -= (gameSpeed + 1.5);
+                ctx.drawImage(imgGhost, obs.x, obs.y, obs.w, obs.h);
+                // Colisión ajustada (Tolerancia de 25px)
+                if (scooby.x + 25 < obs.x + obs.w && scooby.x + scooby.w - 25 > obs.x && scooby.y + 25 < obs.y + obs.h && scooby.y + scooby.h - 25 > obs.y) endGame();
+                if (obs.x < -100) obstacles.splice(i, 1);
+            });
 
-            // Galletas
-            if (frame % 120 === 0) snacks.push({ x: canvas.width, y: 100 + Math.random() * 250, w: 40, h: 40 });
+            // Galletas - Detección apenas toca (Radio aumentado)
+            if (frame % 140 === 0) snacks.push({ x: canvas.width, y: 100 + Math.random() * 250, w: 35, h: 35 });
+            
             for (let i = snacks.length - 1; i >= 0; i--) {
                 let s = snacks[i];
                 s.x -= gameSpeed;
                 ctx.drawImage(imgSnack, s.x, s.y, s.w, s.h);
+                
+                // --- DETECCIÓN AL TOCAR (SIN PRECISIÓN DE PUNTA DE NARIZ) ---
                 if (scooby.x < s.x + s.w && scooby.x + scooby.w > s.x && scooby.y < s.y + s.h && scooby.y + scooby.h > s.y) {
                     score++;
                     document.getElementById('score').innerText = score;
-                    sndEat.currentTime = 0; sndEat.play().catch(() => {});
-                    if (score % 10 === 0) {
-                        level++;
-                        gameSpeed += 1.1;
-                        document.getElementById('level').innerText = level;
+                    if (score % 15 === 0) { 
+                        level++; 
+                        gameSpeed += 0.9; 
+                        document.getElementById('level').innerText = level; 
                     }
+                    sndEat.currentTime = 0;
+                    sndEat.play().catch(() => {});
                     snacks.splice(i, 1);
                     continue;
                 }
@@ -143,41 +140,36 @@
         }
 
         function startGame() {
-            gameActive = true; score = 0; level = 1; gameSpeed = 5; frame = 0;
+            gameActive = true; score = 0; level = 1; gameSpeed = 5;
             document.getElementById('score').innerText = 0;
             document.getElementById('level').innerText = 1;
             obstacles = []; snacks = []; platforms = [];
             document.getElementById('startMenu').classList.add('hidden');
             document.getElementById('gameOver').classList.add('hidden');
-            bgMusic.currentTime = 0;
-            bgMusic.play().catch(e => console.log("Error música:", e));
+            bgMusic.play().catch(() => {});
             update();
         }
 
         function endGame() {
             gameActive = false;
             document.getElementById('gameOver').classList.remove('hidden');
-            document.getElementById('finalScore').innerText = "GALLETAS TOTALES: " + score;
             bgMusic.pause();
-            if (score > highStore) {
-                highStore = score;
-                localStorage.setItem('scoobyBest', highStore);
-                document.getElementById('bestScore').innerText = highStore;
+            if (score > highStore) { highStore = score; localStorage.setItem('scoobyBest', highStore); document.getElementById('bestScore').innerText = highStore; }
+        }
+
+        function handleAction() {
+            if (gameActive) {
+                scooby.dy = scooby.jumpPower;
+                scooby.jumps++;
+                sndJump.currentTime = 0;
+                sndJump.play().catch(() => {});
             }
         }
 
-        function handleAction(e) {
-            if (e) e.preventDefault();
-            if (!gameActive) return;
-            if (level === 4) { scooby.inverted = !scooby.inverted; } 
-            else { scooby.dy = scooby.jumpPower; }
-            sndJump.currentTime = 0; sndJump.play().catch(() => {});
-        }
-
+        window.addEventListener('touchstart', (e) => { e.preventDefault(); handleAction(); }, {passive: false});
+        window.addEventListener('mousedown', handleAction);
         document.getElementById('startBtn').addEventListener('click', startGame);
         document.getElementById('retryBtn').addEventListener('click', startGame);
-        window.addEventListener('touchstart', handleAction, {passive: false});
-        window.addEventListener('mousedown', handleAction);
     </script>
 </body>
 </html>
