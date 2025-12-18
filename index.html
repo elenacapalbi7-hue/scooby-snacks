@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Scooby Snacks Runner</title>
+
+<!-- PWA Manifest (inline) -->
+<link rel="manifest" href="data:application/json,{
+  &quot;name&quot;:&quot;Scooby Snacks Runner&quot;,
+  &quot;short_name&quot;:&quot;ScoobyRun&quot;,
+  &quot;start_url&quot;:&quot;.&quot;,
+  &quot;display&quot;:&quot;standalone&quot;,
+  &quot;background_color&quot;:&quot;#000000&quot;,
+  &quot;theme_color&quot;:&quot;#4b0082&quot;
+}">
+<meta name="theme-color" content="#4b0082">
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #000;
+  font-family: Arial, sans-serif;
+  color: #fff;
+  overflow: hidden;
+}
+
+canvas {
+  display: block;
+  margin: auto;
+  background: linear-gradient(#1b1b3a, #000000);
+}
+
+/* HUD */
+#hud {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 18px;
+  z-index: 10;
+}
+
+/* Leaderboard */
+#leaderboard {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0,0,0,0.6);
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  max-width: 200px;
+}
+
+/* Mobile Controls */
+#controls {
+  position: absolute;
+  bottom: 20px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  z-index: 20;
+}
+
+button {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: none;
+  font-size: 24px;
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  touch-action: manipulation;
+}
+</style>
+</head>
+
+<body>
+
+<div id="hud">Score: <span id="score">0</span></div>
+
+<div id="leaderboard">
+<strong>Leaderboard (Local Demo)</strong>
+<ol id="scores"></ol>
+</div>
+
+<canvas id="game" width="360" height="640"></canvas>
+
+<div id="controls">
+  <button id="jumpBtn">JUMP</button>
+</div>
+
+<script>
+/* ===============================
+   GAME CONFIG
+================================ */
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let score = 0;
+let speed = 4;
+let gravity = 0.6;
+let gameOver = false;
+
+/* Anti-cheat */
+let lastScoreTime = Date.now();
+
+/* ===============================
+   PLAYER (SCOOBY)
+================================ */
+const scooby = {
+  x: 50,
+  y: 520,
+  width: 50,
+  height: 50,
+  velocityY: 0,
+
+  jump() {
+    if (this.y >= 520) {
+      this.velocityY = -12;
+    }
+  },
+
+  update() {
+    this.velocityY += gravity;
+    this.y += this.velocityY;
+
+    if (this.y > 520) {
+      this.y = 520;
+      this.velocityY = 0;
+    }
+  },
+
+  draw() {
+    ctx.fillStyle = "#8b4513";
+    ctx.fillRect(this.x, this.y, this.width, this.height);
+  }
+};
+
+/* ===============================
+   OBJECTS
+================================ */
+let snacks = [];
+let ghosts = [];
+
+function spawnSnack() {
+  snacks.push({ x: canvas.width, y: 520, size: 20 });
+}
+
+function spawnGhost() {
+  ghosts.push({ x: canvas.width, y: 520, size: 40 });
+}
+
+/* ===============================
+   LEADERBOARD (LOCAL / DEMO)
+================================ */
+function saveScore(value) {
+  let scores = JSON.parse(localStorage.getItem("scooby_scores") || "[]");
+  scores.push(value);
+  scores.sort((a, b) => b - a);
+  scores = scores.slice(0, 5);
+  localStorage.setItem("scooby_scores", JSON.stringify(scores));
+}
+
+function renderScores() {
+  const scores = JSON.parse(localStorage.getItem("scooby_scores") || "[]");
+  document.getElementById("scores").innerHTML =
+    scores.map(s => `<li>${s}</li>`).join("");
+}
+renderScores();
+
+/* ===============================
+   INPUT HANDLING
+================================ */
+document.getElementById("jumpBtn").addEventListener("touchstart", e => {
+  e.preventDefault();
+  scooby.jump();
+});
+
+document.addEventListener("keydown", e => {
+  if (e.code === "Space") {
+    scooby.jump();
+  }
+});
+
+/* ===============================
+   GAME LOOP
+================================ */
+function update() {
+  if (gameOver) return;
+
+  scooby.update();
+
+  snacks.forEach(snack => snack.x -= speed);
+  ghosts.forEach(ghost => ghost.x -= speed);
+
+  /* Snack collision */
+  snacks = snacks.filter(snack => {
+    if (
+      snack.x < scooby.x + scooby.width &&
+      snack.x + snack.size > scooby.x &&
+      snack.y < scooby.y + scooby.height
+    ) {
+      const now = Date.now();
+      if (now - lastScoreTime > 100) {
+        score++;
+        lastScoreTime = now;
+      }
+      return false;
+    }
+    return snack.x > -snack.size;
+  });
+
+  /* Ghost collision */
+  ghosts.forEach(ghost => {
+    if (
+      ghost.x < scooby.x + scooby.width &&
+      ghost.x + ghost.size > scooby.x &&
+      ghost.y < scooby.y + scooby.height
+    ) {
+      gameOver = true;
+      saveScore(score);
+      renderScores();
+      alert("Game Over! Score: " + score);
+      location.reload();
+    }
+  });
+
+  if (Math.random() < 0.02) spawnSnack();
+  if (Math.random() < 0.015) spawnGhost();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  /* Ground */
+  ctx.fillStyle = "#222";
+  ctx.fillRect(0, 570, canvas.width, 70);
+
+  scooby.draw();
+
+  /* Snacks */
+  ctx.fillStyle = "#f5deb3";
+  snacks.forEach(snack =>
+    ctx.fillRect(snack.x, snack.y, snack.size, snack.size)
+  );
+
+  /* Ghosts */
+  ctx.fillStyle = "#bbbbbb";
+  ghosts.forEach(ghost =>
+    ctx.fillRect(ghost.x, ghost.y, ghost.size, ghost.size)
+  );
+
+  document.getElementById("score").innerText = score;
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+loop();
+
+/* ===============================
+   SERVICE WORKER (INLINE)
+================================ */
+if ("serviceWorker" in navigator) {
+  const swCode = `
+    self.addEventListener('install', event => self.skipWaiting());
+    self.addEventListener('fetch', event => {
+      event.respondWith(
+        fetch(event.request).catch(() => new Response('Offline'))
+      );
+    });
+  `;
+  const blob = new Blob([swCode], { type: "text/javascript" });
+  const swUrl = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl);
+}
+</script>
+
+</body>
+</html>
