@@ -3,24 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Scooby Final Fix</title>
+    <title>Scooby Dash - Torneo Oficial</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; touch-action: none; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; touch-action: none; color: white; }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
-        canvas { background: #111; max-width: 100%; max-height: 100%; border: 2px solid #ccff00; display: block; }
-        #ui { position: absolute; top: 10px; width: 90%; display: flex; justify-content: space-between; color: #ccff00; font-size: 18px; font-weight: bold; z-index: 100; pointer-events: none; }
-        #startBtn { position: absolute; padding: 20px 50px; font-size: 24px; background: #ccff00; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; z-index: 200; box-shadow: 0 0 15px #ccff00; }
+        canvas { background: #111; max-width: 100%; max-height: 100%; border-top: 2px solid #ccff00; border-bottom: 2px solid #ccff00; }
+        #ui { position: absolute; top: 10px; width: 95%; display: flex; justify-content: space-between; color: #ccff00; font-size: 14px; font-weight: bold; z-index: 100; pointer-events: none; }
+        .menu { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; text-align: center; }
+        .btn-main { padding: 20px 50px; font-size: 24px; background: #ccff00; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; box-shadow: 0 0 20px rgba(204, 255, 0, 0.6); text-transform: uppercase; }
         .hidden { display: none !important; }
+        .verif-code { font-size: 10px; color: #444; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <div id="game-container">
         <div id="ui">
-            <div>NIVEL <span id="lv">1</span></div>
+            <div>NIVEL: <span id="lv">1</span></div>
             <div>GALLETAS: <span id="sc">0</span></div>
+            <div>TOP: <span id="topSc">0</span></div>
         </div>
-        <button id="startBtn">JUGAR</button>
+
+        <div id="mainMenu" class="menu">
+            <h1 style="color:#ccff00; font-size: 40px; margin-bottom: 10px;">SCOOBY DASH</h1>
+            <p style="margin-bottom: 30px;">RECOLECTA 10 PARA SUBIR DE NIVEL</p>
+            <button class="btn-main" onclick="startGame()">INICIAR TORNEO</button>
+        </div>
+
+        <div id="deathMenu" class="menu hidden">
+            <h1 style="color:red;">¡FIN DEL JUEGO!</h1>
+            <h2 id="finalScoreDisplay" style="font-size: 50px; margin: 10px 0;">0</h2>
+            <div style="color:#ccff00">MEJOR PUNTAJE: <span id="bestDisplay">0</span></div>
+            <div id="vCode" class="verif-code"></div>
+            <br>
+            <button class="btn-main" onclick="startGame()">REINTENTAR</button>
+        </div>
+
         <canvas id="c"></canvas>
     </div>
 
@@ -29,37 +47,43 @@
         const ctx = canvas.getContext('2d');
         canvas.width = 800; canvas.height = 450;
 
-        // Carga de imágenes
         const imgS = new Image(); imgS.src = '4d0e8e93e8663b020f6063451e53118a.png';
         const imgG = new Image(); imgG.src = 'eb4380a3cf64873dc0ebbad595d0886f.png';
         const imgB = new Image(); imgB.src = '1766045750713.png';
         const imgF = new Image(); imgF.src = '535eb96ca41945fbcd1774e60989d8e3.png';
-
-        // Sonidos (Carga ligera para evitar bloqueos)
         const sndJ = new Audio('audio saltoo.mp4');
         const sndE = new Audio('audio galletaa.mp4');
-        const bgMusic = new Audio('DanLebowitzTiptoeOuttheBack.mp4');
-        bgMusic.loop = true;
+        const bgM = new Audio('DanLebowitzTiptoeOuttheBack.mp4'); bgM.loop = true;
 
         let score = 0, level = 1, speed = 6, active = false, frame = 0;
         let scooby = { x: 70, y: 330, w: 80, h: 80, dy: 0, jumps: 0 };
         let obs = [], snacks = [], platforms = [], bgX = 0;
 
+        // Recuperar el TOP SCORE guardado al abrir el juego
+        let highStore = localStorage.getItem('scooby_top') || 0;
+        document.getElementById('topSc').innerText = highStore;
+
+        function startGame() {
+            active = true; score = 0; level = 1; speed = 6; obs = []; snacks = []; platforms = []; frame = 0;
+            scooby.y = 330; scooby.dy = 0; scooby.jumps = 0;
+            document.getElementById('sc').innerText = "0";
+            document.getElementById('lv').innerText = "1";
+            document.getElementById('mainMenu').classList.add('hidden');
+            document.getElementById('deathMenu').classList.add('hidden');
+            bgM.play().catch(()=>{});
+            animate();
+        }
+
         function animate() {
             if (!active) return;
-            ctx.clearRect(0, 0, 800, 450);
-
-            // Fondo
+            ctx.clearRect(0,0,800,450);
             bgX -= (speed - 1); if(bgX <= -800) bgX = 0;
-            ctx.drawImage(imgB, bgX, 0, 800, 450); ctx.drawImage(imgB, bgX + 800, 0, 800, 450);
+            ctx.drawImage(imgB, bgX, 0, 800, 450); ctx.drawImage(imgB, bgX+800, 0, 800, 450);
 
-            // Gravedad y Salto
-            scooby.dy += 0.9; 
-            scooby.y += scooby.dy;
+            scooby.dy += 0.9; scooby.y += scooby.dy;
             if(scooby.y > 330) { scooby.y = 330; scooby.dy = 0; scooby.jumps = 0; }
             ctx.drawImage(imgS, scooby.x, scooby.y, scooby.w, scooby.h);
 
-            // Nivel 3+: Escalones
             if(level >= 3 && frame % 140 === 0) platforms.push({x: 800, y: 220, w: 160, h: 20});
             platforms.forEach((p, i) => {
                 p.x -= speed;
@@ -69,57 +93,52 @@
                 }
             });
 
-            // Obstáculos
-            if(frame % Math.max(30, 120 - (level*8)) === 0) {
-                let yP = (level >= 4) ? Math.random() * 300 : 340;
-                obs.push({x: 800, y: yP, w: 50, h: 50});
-            }
+            if(frame % Math.max(30, 120-(level*8)) === 0) obs.push({x: 800, y: (level>=4?Math.random()*300:340), w: 55, h: 55});
             obs.forEach((o, i) => {
-                o.x -= (speed + 2);
-                ctx.drawImage(imgF, o.x, o.y, o.w, o.h);
-                if(scooby.x+20 < o.x+30 && scooby.x+60 > o.x && scooby.y+20 < o.y+30 && scooby.y+60 > o.y) {
-                    active = false; bgMusic.pause();
-                    document.getElementById('startBtn').classList.remove('hidden');
-                    document.getElementById('startBtn').innerText = "REINTENTAR";
-                }
+                o.x -= (speed + 2); ctx.drawImage(imgF, o.x, o.y, o.w, o.h);
+                if(scooby.x+20 < o.x+35 && scooby.x+60 > o.x+15 && scooby.y+20 < o.y+35 && scooby.y+60 > o.y+15) endGame();
             });
 
-            // Galletas
             if(frame % 100 === 0) snacks.push({x: 800, y: 150+Math.random()*150, w: 45, h: 45});
             for(let i=snacks.length-1; i>=0; i--){
                 let s = snacks[i]; s.x -= speed; ctx.drawImage(imgG, s.x, s.y, s.w, s.h);
                 if(scooby.x < s.x+40 && scooby.x+80 > s.x && scooby.y < s.y+40 && scooby.y+80 > s.y) {
-                    snacks.splice(i,1); score++; sndE.currentTime = 0; sndE.play().catch(()=>{});
+                    snacks.splice(i,1); score++; sndE.currentTime=0; sndE.play().catch(()=>{});
                     document.getElementById('sc').innerText = score;
                     if(score % 10 === 0) { level++; speed += 1.3; document.getElementById('lv').innerText = level; }
                 }
             }
-            frame++;
-            requestAnimationFrame(animate);
+            frame++; requestAnimationFrame(animate);
         }
 
-        function startGame() {
-            active = true; score = 0; level = 1; speed = 6; obs = []; snacks = []; platforms = [];
-            scooby.y = 330; scooby.dy = 0; scooby.jumps = 0;
-            document.getElementById('startBtn').classList.add('hidden');
-            document.getElementById('sc').innerText = "0";
-            document.getElementById('lv').innerText = "1";
-            bgMusic.play().catch(()=>{});
-            animate();
+        function endGame() {
+            active = false; bgM.pause();
+            
+            // Lógica de Mejor Puntaje
+            let currentTop = localStorage.getItem('scooby_top') || 0;
+            if (score > currentTop) {
+                localStorage.setItem('scooby_top', score);
+                currentTop = score;
+            }
+            
+            document.getElementById('topSc').innerText = currentTop;
+            document.getElementById('bestDisplay').innerText = currentTop;
+            document.getElementById('finalScoreDisplay').innerText = score;
+            document.getElementById('vCode').innerText = "VERIF: " + btoa(score + "-S").substring(0,6);
+            document.getElementById('deathMenu').classList.remove('hidden');
         }
 
         function jump(e) {
             if(!active) return;
-            if(e) e.preventDefault(); 
-            if(scooby.jumps < 2) {
-                scooby.dy = -17; scooby.jumps++;
-                sndJ.currentTime = 0; sndJ.play().catch(()=>{});
+            if(e && e.target.tagName !== 'BUTTON') {
+                if(scooby.jumps < 2) {
+                    scooby.dy = -17; scooby.jumps++;
+                    sndJ.currentTime = 0; sndJ.play().catch(()=>{});
+                }
             }
         }
-
-        document.getElementById('startBtn').addEventListener('click', startGame);
         window.addEventListener('touchstart', jump, {passive: false});
-        window.addEventListener('mousedown', (e) => { if(e.target.id !== 'startBtn') jump(); });
+        window.addEventListener('mousedown', jump);
     </script>
 </body>
 </html>
