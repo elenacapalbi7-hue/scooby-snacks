@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <title>Scooby-Doo Pro Fix</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; touch-action: none; }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
         canvas { background: #111; max-width: 100%; max-height: 100%; object-fit: contain; border: 2px solid #ccff00; }
         #ui { position: absolute; top: 15px; width: 90%; display: flex; justify-content: space-between; color: #ccff00; font-size: 20px; text-shadow: 2px 2px #000; pointer-events: none; z-index: 10; }
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; }
-        h1 { color: #ccff00; font-size: 35px; text-align: center; margin-bottom: 20px; }
-        #startBtn, #retryBtn { padding: 18px 45px; font-size: 22px; font-weight: bold; background: #ccff00; color: #000; border: none; border-radius: 40px; cursor: pointer; }
+        h1 { color: #ccff00; font-size: 30px; text-align: center; }
+        button { padding: 18px 45px; font-size: 22px; font-weight: bold; background: #ccff00; color: #000; border: none; border-radius: 40px; cursor: pointer; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -42,19 +42,19 @@
         canvas.width = 800;
         canvas.height = 450;
 
-        // IMÁGENES
+        // --- IMÁGENES ---
         const imgScooby = new Image(); imgScooby.src = '4d0e8e93e8663b020f6063451e53118a.png';
         const imgSnack = new Image(); imgSnack.src = 'eb4380a3cf64873dc0ebbad595d0886f.png';
         const imgBg = new Image(); imgBg.src = '1766045750713.png';
         const imgGhost = new Image(); imgGhost.src = '535eb96ca41945fbcd1774e60989d8e3.png';
 
-        // SONIDOS - CORREGIDOS
+        // --- SONIDOS ---
         const sndJump = new Audio('audio saltoo.mp4');
         const sndEat = new Audio('audio galletaa.mp4');
         
-        // Usamos encodeURI para manejar los espacios y paréntesis del nombre largo
-        const musicName = "Eating sound effects_Free Download _ No Copyright(MP3_160K).mp4";
-        const bgMusic = new Audio(encodeURI(musicName));
+        // NOMBRE EXACTO DE TU MÚSICA
+        const musicFile = 'Eating sound effects_Free Download _ No Copyright(MP3_160K).mp4';
+        const bgMusic = new Audio(musicFile);
         bgMusic.loop = true;
 
         let score = 0;
@@ -66,38 +66,53 @@
         let frame = 0;
         let obstacles = [];
         let snacks = [];
-        let scooby = { x: 80, y: 320, w: 90, h: 90, dy: 0, gravity: 0.8, jumpPower: -16, jumps: 0 };
+        let scooby = { x: 80, y: 320, w: 85, h: 85, dy: 0, gravity: 0.8, jumpPower: -16, jumps: 0 };
 
         function update() {
             if (!gameActive) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
+            // Fondo
             bgX -= 4;
             if (bgX <= -canvas.width) bgX = 0;
             ctx.drawImage(imgBg, bgX, 0, canvas.width, canvas.height);
             ctx.drawImage(imgBg, bgX + canvas.width, 0, canvas.width, canvas.height);
 
+            // Scooby
             scooby.dy += scooby.gravity;
             scooby.y += scooby.dy;
             if (scooby.y > 320) { scooby.y = 320; scooby.dy = 0; scooby.jumps = 0; }
             ctx.drawImage(imgScooby, scooby.x, scooby.y + (scooby.jumps === 0 ? Math.sin(frame * 0.3) * 5 : 0), scooby.w, scooby.h);
 
-            if (frame % 115 === 0) obstacles.push({ x: canvas.width, y: 340, w: 75, h: 75 });
+            // Fantasmas (Obstáculos)
+            if (frame % 115 === 0) obstacles.push({ x: canvas.width, y: 345, w: 70, h: 70 });
             obstacles.forEach((obs, i) => {
                 obs.x -= 6;
                 ctx.drawImage(imgGhost, obs.x, obs.y, obs.w, obs.h);
-                if (scooby.x < obs.x + 45 && scooby.x + 55 > obs.x && scooby.y < obs.y + 45 && scooby.y + 55 > obs.y) endGame();
+                // Colisión ajustada para ser justa
+                if (scooby.x + 10 < obs.x + obs.w - 10 && scooby.x + scooby.w - 10 > obs.x + 10 && scooby.y + 10 < obs.y + obs.h - 10 && scooby.y + scooby.h - 10 > obs.y + 10) {
+                    endGame();
+                }
                 if (obs.x < -100) obstacles.splice(i, 1);
             });
 
-            if (frame % 140 === 0) snacks.push({ x: canvas.width, y: 180 + Math.random() * 120, w: 50, h: 50 });
+            // Galletas (Premios)
+            if (frame % 140 === 0) snacks.push({ x: canvas.width, y: 200 + Math.random() * 100, w: 45, h: 45 });
             snacks.forEach((s, i) => {
                 s.x -= 5;
                 ctx.drawImage(imgSnack, s.x, s.y, s.w, s.h);
-                if (scooby.x < s.x + 45 && scooby.x + 55 > s.x && scooby.y < s.y + 45 && scooby.y + 55 > s.y) {
-                    score++; document.getElementById('score').innerText = score;
-                    // AQUÍ SOLO SUENA LA GALLETA
-                    sndEat.currentTime = 0;
+                
+                // --- CORRECCIÓN COLISIÓN GALLETA ---
+                // Ahora los bordes son mucho más pequeños (15px de margen), 
+                // obligando a Scooby a tocarla de verdad.
+                if (scooby.x + 15 < s.x + s.w - 15 && 
+                    scooby.x + scooby.w - 15 > s.x + 15 && 
+                    scooby.y + 15 < s.y + s.h - 15 && 
+                    scooby.y + scooby.h - 15 > s.y + 15) {
+                    
+                    score++;
+                    document.getElementById('score').innerText = score;
+                    sndEat.currentTime = 0; // Reinicia el sonido para que suene al instante
                     sndEat.play().catch(() => {}); 
                     snacks.splice(i, 1);
                 }
@@ -115,8 +130,8 @@
             document.getElementById('startMenu').classList.add('hidden');
             document.getElementById('gameOver').classList.add('hidden');
             
-            // Forzar carga de música
-            bgMusic.play().catch(e => console.log("Error música:", e));
+            // Intento de reproducir música
+            bgMusic.play().catch(err => console.log("Música esperando interacción..."));
             update();
         }
 
@@ -135,7 +150,6 @@
             if (gameActive && scooby.jumps < 2) {
                 scooby.dy = scooby.jumpPower;
                 scooby.jumps++;
-                // AQUÍ SOLO SUENA EL SALTO
                 sndJump.currentTime = 0;
                 sndJump.play().catch(() => {});
             }
