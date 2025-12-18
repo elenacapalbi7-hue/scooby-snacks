@@ -11,7 +11,7 @@
         #ui { position: absolute; top: 15px; width: 90%; display: flex; justify-content: space-between; color: #ccff00; font-size: 20px; text-shadow: 2px 2px #000; pointer-events: none; z-index: 10; }
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; }
         h1 { color: #ccff00; font-size: 35px; text-align: center; margin-bottom: 20px; }
-        #startBtn, #retryBtn { padding: 18px 45px; font-size: 22px; font-weight: bold; background: #ccff00; color: #000; border: none; border-radius: 40px; cursor: pointer; box-shadow: 0 4px 10px rgba(204, 255, 0, 0.5); }
+        #startBtn, #retryBtn { padding: 18px 45px; font-size: 22px; font-weight: bold; background: #ccff00; color: #000; border: none; border-radius: 40px; cursor: pointer; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -39,22 +39,22 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        
-        // Resolución fija para que NUNCA se estire
         canvas.width = 800;
         canvas.height = 450;
 
-        // --- IMÁGENES ---
+        // IMÁGENES
         const imgScooby = new Image(); imgScooby.src = '4d0e8e93e8663b020f6063451e53118a.png';
         const imgSnack = new Image(); imgSnack.src = 'eb4380a3cf64873dc0ebbad595d0886f.png';
         const imgBg = new Image(); imgBg.src = '1766045750713.png';
         const imgGhost = new Image(); imgGhost.src = '535eb96ca41945fbcd1774e60989d8e3.png';
 
-        // --- SONIDOS (Nombres exactos de tus archivos) ---
+        // SONIDOS - CORREGIDOS
         const sndJump = new Audio('audio saltoo.mp4');
         const sndEat = new Audio('audio galletaa.mp4');
-        // Nombre largo corregido:
-        const bgMusic = new Audio('Eating sound effects_Free Download _ No Copyright(MP3_160K).mp4');
+        
+        // Usamos encodeURI para manejar los espacios y paréntesis del nombre largo
+        const musicName = "Eating sound effects_Free Download _ No Copyright(MP3_160K).mp4";
+        const bgMusic = new Audio(encodeURI(musicName));
         bgMusic.loop = true;
 
         let score = 0;
@@ -72,19 +72,16 @@
             if (!gameActive) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Fondo infinito
             bgX -= 4;
             if (bgX <= -canvas.width) bgX = 0;
             ctx.drawImage(imgBg, bgX, 0, canvas.width, canvas.height);
             ctx.drawImage(imgBg, bgX + canvas.width, 0, canvas.width, canvas.height);
 
-            // Scooby
             scooby.dy += scooby.gravity;
             scooby.y += scooby.dy;
             if (scooby.y > 320) { scooby.y = 320; scooby.dy = 0; scooby.jumps = 0; }
             ctx.drawImage(imgScooby, scooby.x, scooby.y + (scooby.jumps === 0 ? Math.sin(frame * 0.3) * 5 : 0), scooby.w, scooby.h);
 
-            // Fantasmas
             if (frame % 115 === 0) obstacles.push({ x: canvas.width, y: 340, w: 75, h: 75 });
             obstacles.forEach((obs, i) => {
                 obs.x -= 6;
@@ -93,13 +90,14 @@
                 if (obs.x < -100) obstacles.splice(i, 1);
             });
 
-            // Galletas
             if (frame % 140 === 0) snacks.push({ x: canvas.width, y: 180 + Math.random() * 120, w: 50, h: 50 });
             snacks.forEach((s, i) => {
                 s.x -= 5;
                 ctx.drawImage(imgSnack, s.x, s.y, s.w, s.h);
                 if (scooby.x < s.x + 45 && scooby.x + 55 > s.x && scooby.y < s.y + 45 && scooby.y + 55 > s.y) {
                     score++; document.getElementById('score').innerText = score;
+                    // AQUÍ SOLO SUENA LA GALLETA
+                    sndEat.currentTime = 0;
                     sndEat.play().catch(() => {}); 
                     snacks.splice(i, 1);
                 }
@@ -117,8 +115,8 @@
             document.getElementById('startMenu').classList.add('hidden');
             document.getElementById('gameOver').classList.add('hidden');
             
-            // Iniciar música con manejo de error para que el botón no se trabe
-            bgMusic.play().catch(() => console.log("Cargando música..."));
+            // Forzar carga de música
+            bgMusic.play().catch(e => console.log("Error música:", e));
             update();
         }
 
@@ -137,24 +135,19 @@
             if (gameActive && scooby.jumps < 2) {
                 scooby.dy = scooby.jumpPower;
                 scooby.jumps++;
+                // AQUÍ SOLO SUENA EL SALTO
+                sndJump.currentTime = 0;
                 sndJump.play().catch(() => {});
             }
         }
 
-        // Eventos
         window.addEventListener('touchstart', (e) => { 
             if(gameActive) { e.preventDefault(); jump(); }
         }, {passive: false});
         window.addEventListener('mousedown', jump);
         
-        document.getElementById('startBtn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            startGame();
-        });
-        document.getElementById('retryBtn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            startGame();
-        });
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('retryBtn').addEventListener('click', startGame);
     </script>
 </body>
 </html>
