@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scooby Level-Up: Torneo Pro</title>
+    <title>Scooby Level-Up: Torneo Seguro</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; touch-action: none; -webkit-user-select: none; }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
@@ -18,19 +18,19 @@
 
     <div id="game-container">
         <div id="ui">
-            <div>DESTREZA: <span id="modeName">INICIO</span></div>
+            <div>MODO: <span id="modeName">ESPERANDO</span></div>
             <div>🍪: <span id="sc">0</span></div>
             <div>TOP: <span id="topSc">0</span></div>
         </div>
 
         <div id="mainMenu" class="menu">
             <h1 style="color:#ccff00; font-size: 40px;">SCOOBY LEVEL-UP</h1>
-            <p>¡NIVELES CORREGIDOS - SIN CAÍDAS!</p>
+            <p>¡NIVELES DE DESTREZA CORREGIDOS!</p>
             <button class="btn-main" onpointerdown="startGame(event)">INICIAR TORNEO</button>
         </div>
 
         <div id="deathMenu" class="menu" style="display:none;">
-            <h1 style="color:red; font-size: 45px;">FIN DEL JUEGO</h1>
+            <h1 style="color:red; font-size: 45px;">GAME OVER</h1>
             <h2 id="finalScore" style="font-size: 60px;">0</h2>
             <button class="btn-main" onpointerdown="startGame(event)">REINTENTAR</button>
         </div>
@@ -72,12 +72,12 @@
             if(!active) return;
             sndJ.currentTime = 0; sndJ.play().catch(()=>{});
 
-            // Lógica según el nivel
-            if (level === 2) { // Nadando
+            // Solo cambia la fuerza del salto según el modo, pero nunca el suelo
+            if (level === 2) { // Modo Nadar (salto corto pero constante)
                 scooby.dy = -7;
-            } else if (level === 4) { // Flappy
+            } else if (level === 4) { // Modo Flappy (impulso medio)
                 scooby.dy = -10;
-            } else { // Clásico, Vagoneta o Experto
+            } else { // Clásico, Vagoneta y Gravedad
                 if(scooby.jumps < 2) {
                     scooby.dy = -17;
                     scooby.jumps++;
@@ -102,7 +102,7 @@
             scooby.dy += gravity;
             scooby.y += scooby.dy;
 
-            // --- SUELO SIEMPRE ACTIVO PARA EVITAR EL BUG ---
+            // --- SUELO DE SEGURIDAD (NUNCA DESAPARECE) ---
             if(scooby.y > 330) { 
                 scooby.y = 330; 
                 scooby.dy = 0; 
@@ -110,41 +110,44 @@
             }
             if(scooby.y < 0) scooby.y = 0;
 
-            // --- MODOS ---
-            if (level === 1) document.getElementById('modeName').innerText = "CORREDOR";
+            // --- ACTUALIZACIÓN DE MODOS ---
+            if (level === 1) document.getElementById('modeName').innerText = "CLÁSICO";
             else if (level === 2) {
                 document.getElementById('modeName').innerText = "NADADOR";
-                gravity = 0.3; // Gravedad ligera para nadar
+                gravity = 0.3; // Flota más
             }
             else if (level === 3) {
                 document.getElementById('modeName').innerText = "VAGONETA";
-                gravity = 1.1; // Caída rápida
+                gravity = 1.1; // Cae rápido (más difícil)
             }
             else if (level === 4) {
                 document.getElementById('modeName').innerText = "FLAPPY";
                 gravity = 0.6;
             }
-            else document.getElementById('modeName').innerText = "EXPERTO";
+            else {
+                document.getElementById('modeName').innerText = "EXPERTO";
+                gravity = 0.95;
+            }
 
             // Dibujar Scooby
             ctx.drawImage(imgS, scooby.x, scooby.y, scooby.w, scooby.h);
 
             // Obstáculos
-            if(frame % (level === 3 ? 70 : 100) === 0) {
+            if(frame % (level === 3 ? 60 : 100) === 0) {
                 obs.push({x: 800, y: 335, w: 60, h: 60});
             }
             for(let i=obs.length-1; i>=0; i--) {
                 obs[i].x -= (speed + 2);
                 ctx.drawImage(imgF, obs[i].x, obs[i].y, obs[i].w, obs[i].h);
-                // Colisión
+                // Colisión ajustada
                 if(scooby.x+20 < obs[i].x+40 && scooby.x+55 > obs[i].x+20 && scooby.y+20 < obs[i].y+40 && scooby.y+55 > obs[i].y+20) {
                     endGame();
                 }
                 if(obs[i].x < -100) obs.splice(i, 1);
             }
 
-            // Galletas
-            if(frame % 90 === 0) snacks.push({x: 800, y: 150 + Math.random()*150, w: 45, h: 45});
+            // Galletas y Cambio de Nivel
+            if(frame % 100 === 0) snacks.push({x: 800, y: 150 + Math.random()*150, w: 45, h: 45});
             for(let i=snacks.length-1; i>=0; i--){
                 snacks[i].x -= speed;
                 ctx.drawImage(imgG, snacks[i].x, snacks[i].y, snacks[i].w, snacks[i].h);
@@ -152,11 +155,11 @@
                     snacks.splice(i,1); score++; sndE.play().catch(()=>{});
                     document.getElementById('sc').innerText = score;
                     
+                    // CAMBIO SEGURO CADA 10 GALLETAS
                     if(score > 0 && score % 10 === 0) { 
                         level++; 
-                        speed += 1.5;
-                        obs = []; // Limpiar para que el cambio de nivel sea justo
-                        if(level !== 2 && level !== 4) gravity = 0.95;
+                        speed += 1.5; // Sube la velocidad poco a poco
+                        obs = []; // Limpia fantasmas para que el cambio no sea brusco
                     }
                 }
                 if(snacks[i] && snacks[i].x < -100) snacks.splice(i,1);
