@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Scooby-Doo Pro Fix</title>
+    <title>Scooby-Doo Precision</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; touch-action: none; }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
-        canvas { background: #111; max-width: 100%; max-height: 100%; object-fit: contain; border: 2px solid #ccff00; }
+        canvas { background: #111; max-width: 100%; max-height: 100%; object-fit: contain; }
         #ui { position: absolute; top: 15px; width: 90%; display: flex; justify-content: space-between; color: #ccff00; font-size: 20px; text-shadow: 2px 2px #000; pointer-events: none; z-index: 10; }
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; }
-        h1 { color: #ccff00; font-size: 30px; text-align: center; }
-        button { padding: 18px 45px; font-size: 22px; font-weight: bold; background: #ccff00; color: #000; border: none; border-radius: 40px; cursor: pointer; }
+        button { padding: 18px 45px; font-size: 22px; font-weight: bold; background: #ccff00; border: none; border-radius: 40px; cursor: pointer; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -22,33 +21,27 @@
             <div>SNACKS: <span id="score">0</span></div>
             <div>TOP: <span id="bestScore">0</span></div>
         </div>
-
         <div id="startMenu" class="overlay">
-            <h1>SCOOBY-DOO RUN</h1>
+            <h1 style="color:#ccff00">SCOOBY RUN</h1>
             <button id="startBtn">START GAME</button>
         </div>
-
         <div id="gameOver" class="overlay hidden">
-            <h1 style="color: #ff0000;">¡FANTASMAS!</h1>
+            <h1 style="color:red">¡FANTASMAS!</h1>
             <button id="retryBtn">REINTENTAR</button>
         </div>
-
         <canvas id="gameCanvas"></canvas>
     </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        canvas.width = 800;
-        canvas.height = 450;
+        canvas.width = 800; canvas.height = 450;
 
-        // IMÁGENES
         const imgScooby = new Image(); imgScooby.src = '4d0e8e93e8663b020f6063451e53118a.png';
         const imgSnack = new Image(); imgSnack.src = 'eb4380a3cf64873dc0ebbad595d0886f.png';
         const imgBg = new Image(); imgBg.src = '1766045750713.png';
         const imgGhost = new Image(); imgGhost.src = '535eb96ca41945fbcd1774e60989d8e3.png';
 
-        // SONIDOS
         const sndJump = new Audio('audio saltoo.mp4');
         const sndEat = new Audio('audio galletaa.mp4');
         const bgMusic = new Audio('Eating sound effects_Free Download _ No Copyright(MP3_160K).mp4');
@@ -59,71 +52,61 @@
         document.getElementById('bestScore').innerText = highStore;
         
         let gameActive = false;
-        let bgX = 0;
-        let frame = 0;
-        let obstacles = [];
-        let snacks = [];
-        
-        // Ajustamos la posición de Scooby para que no pise las galletas del dibujo de fondo
-        let floorY = 335; 
-        let scooby = { x: 80, y: floorY, w: 90, h: 90, dy: 0, gravity: 0.8, jumpPower: -17, jumps: 0 };
+        let bgX = 0; let frame = 0;
+        let obstacles = []; let snacks = [];
+        let scooby = { x: 80, y: 335, w: 80, h: 80, dy: 0, gravity: 0.8, jumpPower: -17, jumps: 0 };
 
         function update() {
             if (!gameActive) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Fondo
             bgX -= 4;
             if (bgX <= -canvas.width) bgX = 0;
             ctx.drawImage(imgBg, bgX, 0, canvas.width, canvas.height);
             ctx.drawImage(imgBg, bgX + canvas.width, 0, canvas.width, canvas.height);
 
-            // Física de Scooby
             scooby.dy += scooby.gravity;
             scooby.y += scooby.dy;
-            if (scooby.y > floorY) { 
-                scooby.y = floorY; 
-                scooby.dy = 0; 
-                scooby.jumps = 0; 
-            }
-
-            // Dibujar Scooby (solo la imagen real)
+            if (scooby.y > 335) { scooby.y = 335; scooby.dy = 0; scooby.jumps = 0; }
             ctx.drawImage(imgScooby, scooby.x, scooby.y, scooby.w, scooby.h);
 
-            // Fantasmas reales (los que se mueven)
-            if (frame % 130 === 0) obstacles.push({ x: canvas.width, y: floorY + 10, w: 70, h: 70 });
+            // Fantasmas
+            if (frame % 130 === 0) obstacles.push({ x: canvas.width, y: 345, w: 60, h: 60 });
             obstacles.forEach((obs, i) => {
                 obs.x -= 6;
                 ctx.drawImage(imgGhost, obs.x, obs.y, obs.w, obs.h);
-                if (scooby.x + 25 < obs.x + obs.w - 25 && scooby.x + scooby.w - 25 > obs.x + 25 && scooby.y + 25 < obs.y + obs.h - 25 && scooby.y + scooby.h - 25 > obs.y + 25) {
-                    endGame();
-                }
+                // Colisión fantasma (más permisiva para que no sea tan difícil)
+                if (scooby.x + 30 < obs.x + obs.w && scooby.x + scooby.w - 30 > obs.x && scooby.y + 30 < obs.y + obs.h && scooby.y + scooby.h - 30 > obs.y) endGame();
                 if (obs.x < -100) obstacles.splice(i, 1);
             });
 
-            // Galletas REALES (Las chiquitas que aparecen volando)
-            if (frame % 160 === 0) {
-                // Las hacemos aparecer más arriba para que no se mezclen con el dibujo del fondo
-                snacks.push({ x: canvas.width, y: 150 + Math.random() * 80, w: 40, h: 40 });
-            }
-
+            // Galletas - CORRECCIÓN DEFINITIVA DE SONIDO
+            if (frame % 150 === 0) snacks.push({ x: canvas.width, y: 150 + Math.random() * 100, w: 35, h: 35, eaten: false });
+            
             snacks.forEach((s, i) => {
                 s.x -= 5;
-                ctx.drawImage(imgSnack, s.x, s.y, s.w, s.h);
-                
-                // DETECCIÓN SOLO PARA GALLETAS CHIQUITAS
-                let dx = (scooby.x + scooby.w/2) - (s.x + s.w/2);
-                let dy = (scooby.y + scooby.h/2) - (s.y + s.h/2);
-                let distance = Math.sqrt(dx * dx + dy * dy);
+                if (!s.eaten) {
+                    ctx.drawImage(imgSnack, s.x, s.y, s.w, s.h);
+                    
+                    // Solo detectamos el choque si el CENTRO de Scooby toca la galleta
+                    let scoobyCenterX = scooby.x + (scooby.w / 2);
+                    let scoobyCenterY = scooby.y + (scooby.h / 2);
+                    let snackCenterX = s.x + (s.w / 2);
+                    let snackCenterY = s.y + (s.h / 2);
 
-                // Solo suena si toca la galleta chiquita que se mueve (distancia corta)
-                if (distance < 35) {
-                    score++;
-                    document.getElementById('score').innerText = score;
-                    sndEat.currentTime = 0; 
-                    sndEat.play().catch(() => {}); 
-                    snacks.splice(i, 1);
+                    let dist = Math.sqrt(Math.pow(scoobyCenterX - snackCenterX, 2) + Math.pow(scoobyCenterY - snackCenterY, 2));
+
+                    // DISTANCIA CORTA (30px): Solo suena cuando está literalmente encima
+                    if (dist < 35) {
+                        s.eaten = true; // Marcamos como comida para que NO vuelva a sonar
+                        score++;
+                        document.getElementById('score').innerText = score;
+                        sndEat.currentTime = 0;
+                        sndEat.play().catch(() => {});
+                        snacks.splice(i, 1);
+                    }
                 }
+                if (s.x < -50) snacks.splice(i, 1);
             });
 
             frame++;
@@ -131,8 +114,7 @@
         }
 
         function startGame() {
-            gameActive = true;
-            score = 0;
+            gameActive = true; score = 0;
             document.getElementById('score').innerText = 0;
             obstacles = []; snacks = [];
             document.getElementById('startMenu').classList.add('hidden');
