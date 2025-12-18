@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Scooby-Doo Fixed Final</title>
+    <title>Scooby-Doo Mystery Run</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; touch-action: none; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; touch-action: none; }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
-        canvas { background: #111; max-width: 100%; max-height: 100%; object-fit: contain; }
+        canvas { background: #111; max-width: 100%; max-height: 100%; object-fit: contain; border: 3px solid #ccff00; }
         #ui { position: absolute; top: 15px; width: 90%; display: flex; justify-content: space-between; color: #ccff00; font-size: 20px; text-shadow: 2px 2px #000; pointer-events: none; z-index: 10; }
-        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; }
-        button { padding: 18px 45px; font-size: 22px; font-weight: bold; background: #ccff00; border: none; border-radius: 40px; cursor: pointer; color: #000; }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; }
+        h1 { color: #ccff00; font-size: 30px; text-align: center; text-transform: uppercase; }
+        button { padding: 20px 50px; font-size: 22px; font-weight: bold; background: #ccff00; border: none; border-radius: 50px; cursor: pointer; color: #000; box-shadow: 0 0 15px #ccff00; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -18,11 +19,11 @@
 
     <div id="game-container">
         <div id="ui">
-            <div>GALLETAS: <span id="score">0</span></div>
-            <div>TOP: <span id="bestScore">0</span></div>
+            <div>SNACKS: <span id="score">0</span></div>
+            <div>RECORD: <span id="bestScore">0</span></div>
         </div>
         <div id="startMenu" class="overlay">
-            <h1 style="color:#ccff00">SCOOBY RUN</h1>
+            <h1>SCOOBY-DOO RUN</h1>
             <button id="startBtn">START GAME</button>
         </div>
         <div id="gameOver" class="overlay hidden">
@@ -54,65 +55,73 @@
         let gameActive = false;
         let bgX = 0; let frame = 0;
         let obstacles = []; let snacks = [];
-        let scooby = { x: 80, y: 335, w: 80, h: 80, dy: 0, gravity: 0.8, jumpPower: -17, jumps: 0 };
+        let scooby = { x: 80, y: 335, w: 85, h: 85, dy: 0, gravity: 0.8, jumpPower: -17, jumps: 0 };
 
         function update() {
             if (!gameActive) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Fondo infinito
+            // Fondo
             bgX -= 4;
             if (bgX <= -canvas.width) bgX = 0;
             ctx.drawImage(imgBg, bgX, 0, canvas.width, canvas.height);
             ctx.drawImage(imgBg, bgX + canvas.width, 0, canvas.width, canvas.height);
 
-            // Scooby
+            // Física Scooby
             scooby.dy += scooby.gravity;
             scooby.y += scooby.dy;
             if (scooby.y > 335) { scooby.y = 335; scooby.dy = 0; scooby.jumps = 0; }
             ctx.drawImage(imgScooby, scooby.x, scooby.y, scooby.w, scooby.h);
 
-            // Fantasmas reales
+            // Obstáculos (Fantasmas)
             if (frame % 130 === 0) obstacles.push({ x: canvas.width, y: 345, w: 60, h: 60 });
             obstacles.forEach((obs, i) => {
-                obs.x -= 6;
+                obs.x -= 7;
                 ctx.drawImage(imgGhost, obs.x, obs.y, obs.w, obs.h);
+                // Colisión ajustada para ser justa
                 if (scooby.x + 35 < obs.x + obs.w && scooby.x + scooby.w - 35 > obs.x && scooby.y + 35 < obs.y + obs.h && scooby.y + scooby.h - 35 > obs.y) endGame();
                 if (obs.x < -100) obstacles.splice(i, 1);
             });
 
-            // --- LÓGICA DE GALLETAS CHIQUITAS ---
-            if (frame % 150 === 0) {
-                // Aparecen en el aire (fuera de la zona de dibujos del fondo)
-                snacks.push({ x: canvas.width, y: 180 + Math.random() * 60, w: 30, h: 30 });
+            // Galletas Chiquitas (Premios)
+            if (frame % 140 === 0) {
+                // Aparecen solo en la parte de arriba (150 a 250 px) para no tocar el fondo
+                snacks.push({ x: canvas.width, y: 150 + Math.random() * 100, w: 35, h: 35, active: true });
             }
             
             for (let i = snacks.length - 1; i >= 0; i--) {
                 let s = snacks[i];
                 s.x -= 5;
-                ctx.drawImage(imgSnack, s.x, s.y, s.w, s.h);
                 
-                // PUNTO DE COLISIÓN MINI (1 píxel)
-                // Usamos el centro exacto de Scooby y el centro de la galleta
-                let scoobyPointX = scooby.x + (scooby.w / 2) + 10; // Un poco adelante
-                let scoobyPointY = scooby.y + (scooby.h / 2);
-                
-                let snackCenterX = s.x + (s.w / 2);
-                let snackCenterY = s.y + (s.h / 2);
+                if (s.active) {
+                    ctx.drawImage(imgSnack, s.x, s.y, s.w, s.h);
 
-                // Solo suena si el centro de Scooby está a menos de 25 píxeles de la galleta (Contacto directo)
-                let distance = Math.sqrt(Math.pow(scoobyPointX - snackCenterX, 2) + Math.pow(scoobyPointY - snackCenterY, 2));
+                    // --- DETECCIÓN DE 1 PÍXEL (MATEMÁTICA PURA) ---
+                    // Punto central de Scooby (Hocico)
+                    let scX = scooby.x + 60; 
+                    let scY = scooby.y + 40;
+                    
+                    // Punto central de Galleta
+                    let snX = s.x + (s.w / 2);
+                    let snY = s.y + (s.h / 2);
 
-                if (distance < 25) {
-                    // ELIMINAR PRIMERO, SONAR DESPUÉS
-                    snacks.splice(i, 1);
-                    score++;
-                    document.getElementById('score').innerText = score;
-                    sndEat.currentTime = 0;
-                    sndEat.play().catch(() => {});
-                    continue; 
+                    // Distancia entre los dos puntos
+                    let dist = Math.sqrt((scX - snX)**2 + (scY - snY)**2);
+
+                    // Solo suena si la distancia es mínima (20 píxeles de radio)
+                    if (dist < 25) {
+                        s.active = false; // Desactivar inmediatamente
+                        score++;
+                        document.getElementById('score').innerText = score;
+                        
+                        // Sonar una única vez
+                        let eatClone = sndEat.cloneNode(); // Clonamos el audio para evitar solapamientos
+                        eatClone.play().catch(() => {});
+                        
+                        snacks.splice(i, 1); // Borrar del mapa
+                        continue;
+                    }
                 }
-
                 if (s.x < -50) snacks.splice(i, 1);
             }
 
@@ -126,6 +135,7 @@
             obstacles = []; snacks = [];
             document.getElementById('startMenu').classList.add('hidden');
             document.getElementById('gameOver').classList.add('hidden');
+            bgMusic.currentTime = 0;
             bgMusic.play().catch(() => {});
             update();
         }
@@ -145,8 +155,8 @@
             if (gameActive && scooby.jumps < 2) {
                 scooby.dy = scooby.jumpPower;
                 scooby.jumps++;
-                sndJump.currentTime = 0;
-                sndJump.play().catch(() => {});
+                let jumpClone = sndJump.cloneNode();
+                jumpClone.play().catch(() => {});
             }
         }
 
