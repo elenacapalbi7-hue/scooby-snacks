@@ -5,35 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <title>Scooby-Doo Snack Run</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #1a0033; font-family: 'Arial', sans-serif; touch-action: manipulation; }
-        /* Fondo de Bosque Misterioso */
-        canvas { display: block; background: #000; margin: 0 auto; max-width: 100%; height: auto; border-bottom: 8px solid #2d5a27; }
-        #ui { position: absolute; top: 10px; left: 15px; color: #ccff00; font-size: 26px; font-weight: bold; text-shadow: 2px 2px #000; pointer-events: none; }
-        #best { position: absolute; top: 10px; right: 15px; color: #fff; font-size: 18px; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 10px; border: 1px solid #ccff00; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; touch-action: manipulation; }
+        canvas { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+        #ui { position: absolute; top: 10px; left: 15px; color: #ccff00; font-size: 24px; font-weight: bold; text-shadow: 2px 2px #000; }
+        #best { position: absolute; top: 10px; right: 15px; color: #fff; font-size: 16px; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 8px; border: 1px solid #ccff00; }
         #controls { position: absolute; bottom: 40px; width: 100%; text-align: center; }
-        .jump-btn { width: 140px; height: 140px; border-radius: 50%; border: 6px solid #ccff00; background: rgba(75, 0, 130, 0.9); color: #ccff00; font-size: 22px; font-weight: bold; box-shadow: 0 0 20px #ccff00; }
+        .jump-btn { width: 120px; height: 120px; border-radius: 50%; border: 4px solid #ccff00; background: rgba(75, 0, 130, 0.9); color: #ccff00; font-size: 20px; font-weight: bold; box-shadow: 0 0 15px #ccff00; }
     </style>
 </head>
 <body>
-    <div id="ui">GALLETAS: <span id="score">0</span></div>
-    <div id="best">RÉCORD: <span id="bestScore">0</span></div>
+    <div id="ui">SNACKS: <span id="score">0</span></div>
+    <div id="best">TOP: <span id="bestScore">0</span></div>
     <canvas id="gameCanvas"></canvas>
-    <div id="controls">
-        <button class="jump-btn" id="jumpBtn">SALTAR</button>
-    </div>
+    <div id="controls"><button class="jump-btn" id="jumpBtn">SALTAR</button></div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         canvas.width = 400; canvas.height = 600;
 
-        // --- IMÁGENES ---
-        const imgScooby = new Image(); imgScooby.src = 'https://i.postimg.cc/02dbm97B/scooby-run.png';
-        const imgGhost = new Image(); imgGhost.src = 'https://i.postimg.cc/856v8ZpM/ghost-obs.png';
-        const imgSnack = new Image(); imgSnack.src = 'https://i.postimg.cc/7Z9yYfX9/scooby-snack.png';
-        const imgBg = new Image(); imgBg.src = 'https://i.postimg.cc/3w6m8mXz/mystery-bg.jpg';
+        // --- TUS IMÁGENES ACTUALIZADAS ---
+        const imgScooby = new Image(); imgScooby.src = '4d0e8e93e8663b020f6063451e53118a.png';
+        const imgSnack = new Image(); imgSnack.src = 'eb4380a3cf64873dc0ebbad595d0886f.png';
+        const imgBg = new Image(); imgBg.src = '1766045750713.png';
+        const imgGhost = new Image(); imgGhost.src = '535eb96ca41945fbcd1774e60989d8e3.png';
 
-        // --- AUDIOS ---
+        // --- SONIDOS ---
         const sndJump = new Audio('https://www.soundjay.com/buttons/sounds/button-27.mp3');
         const sndEat = new Audio('https://www.soundjay.com/misc/sounds/crunch-01.mp3');
         const bgMusic = new Audio('https://www.soundjay.com/free-music/sounds/spooky-music-01.mp3');
@@ -51,41 +48,33 @@
         function update() {
             if (!gameActive) {
                 ctx.fillStyle = "black"; ctx.fillRect(0,0,400,600);
-                ctx.fillStyle = "#ccff00"; ctx.textAlign = "center"; ctx.font = "bold 24px Arial";
-                ctx.fillText("¡TOCA SALTAR PARA EMPEZAR!", 200, 300);
+                ctx.fillStyle = "#ccff00"; ctx.textAlign = "center"; ctx.font = "bold 22px Arial";
+                ctx.fillText("TOCA SALTAR PARA EMPEZAR", 200, 300);
                 return;
             }
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             if (imgBg.complete) ctx.drawImage(imgBg, 0, 0, 400, 600);
 
-            // Scooby
             scooby.dy += scooby.gravity;
             scooby.y += scooby.dy;
             if (scooby.y > 500 - 30) { scooby.y = 500 - 30; scooby.dy = 0; scooby.grounded = true; }
             
-            if (imgScooby.complete) ctx.drawImage(imgScooby, scooby.x, scooby.y, scooby.size, scooby.size);
-            else { ctx.fillStyle = "brown"; ctx.fillRect(scooby.x, scooby.y, 60, 60); }
+            ctx.drawImage(imgScooby, scooby.x, scooby.y, scooby.size, scooby.size);
 
-            // Fantasmas (Si tocas, pierdes)
-            if (frame % 140 === 0) obstacles.push({ x: 400, y: 500, size: 60, speed: 5 });
+            if (frame % 140 === 0) obstacles.push({ x: 400, y: 500, size: 60, speed: 4 });
             obstacles.forEach((obs, i) => {
                 obs.x -= obs.speed;
-                if (imgGhost.complete) ctx.drawImage(imgGhost, obs.x, obs.y, obs.size, obs.size);
-                else { ctx.fillStyle = "white"; ctx.fillRect(obs.x, obs.y, 40, 40); }
-
-                if (scooby.x < obs.x + 40 && scooby.x + 50 > obs.x && scooby.y < obs.y + 40 && scooby.y + 50 > obs.y) resetGame();
-                if (obs.x < -60) obstacles.splice(i, 1);
+                ctx.drawImage(imgGhost, obs.x, obs.y, obs.size, obs.size);
+                if (scooby.x < obs.x + 40 && scooby.x + 60 > obs.x && scooby.y < obs.y + 40 && scooby.y + 60 > obs.y) resetGame();
+                if (obs.x < -70) obstacles.splice(i, 1);
             });
 
-            // Galletas (Si tocas, sumas puntos)
             if (frame % 180 === 0) snacks.push({ x: 400, y: 400, size: 50 });
             snacks.forEach((s, i) => {
-                s.x -= 4;
-                if (imgSnack.complete) ctx.drawImage(imgSnack, s.x, s.y, s.size, s.size);
-                else { ctx.fillStyle = "yellow"; ctx.beginPath(); ctx.arc(s.x, s.y, 15, 0, Math.PI*2); ctx.fill(); }
-
-                if (scooby.x < s.x + 40 && scooby.x + 50 > s.x && scooby.y < s.y + 40 && scooby.y + 50 > s.y) {
+                s.x -= 3;
+                ctx.drawImage(imgSnack, s.x, s.y, s.size, s.size);
+                if (scooby.x < s.x + 40 && scooby.x + 60 > s.x && scooby.y < s.y + 40 && scooby.y + 60 > s.y) {
                     score++; document.getElementById('score').innerText = score;
                     sndEat.play(); snacks.splice(i, 1);
                 }
