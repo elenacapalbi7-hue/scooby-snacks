@@ -1,153 +1,109 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Juego Runner Simple</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background: #eee;
-    }
-    canvas {
-      display: block;
-      margin: 0 auto;
-      background: #ccc;
-    }
-    #jumpBtn {
-      padding: 10px 20px;
-      font-size: 20px;
-      margin: 10px;
-      cursor: pointer;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Scooby Snacks Game</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #222; font-family: sans-serif; touch-action: manipulation; }
+        canvas { display: block; background: #000; margin: 0 auto; max-width: 100%; height: auto; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; font-size: 20px; pointer-events: none; }
+        #controls { position: absolute; bottom: 20px; width: 100%; text-align: center; }
+        .btn { width: 100px; height: 100px; border-radius: 50%; border: none; background: rgba(255,255,255,0.3); color: white; font-size: 18px; font-weight: bold; }
+    </style>
 </head>
 <body>
-  <button id="jumpBtn">JUMP</button>
-  <script>
-    // --- Variables ---
-    let canvasWidth = 600;
-    let canvasHeight = 400;
-    let player, obstacles = [];
-    let groundY = canvasHeight - 50;
-    let gravity = 0.6;
-    let jumpForce = -12;
-    let gameStarted = false;
-    let speed = 2; // velocidad inicial muy lenta
-    let score = 0;
+    <div id="ui">Puntos: <span id="score">0</span></div>
+    <canvas id="gameCanvas"></canvas>
+    <div id="controls">
+        <button class="btn" id="jumpBtn">SALTAR</button>
+    </div>
 
-    // --- Setup ---
-    const canvas = document.createElement('canvas');
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
-    document.body.appendChild(canvas);
-    const ctx = canvas.getContext('2d');
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const jumpBtn = document.getElementById('jumpBtn');
 
-    player = {
-      x: 50,
-      y: groundY,
-      size: 40,
-      ySpeed: 0,
-      onGround: true,
-      color: '#8B4513' // marrón
-    };
+        canvas.width = 400;
+        canvas.height = 600;
 
-    document.getElementById('jumpBtn').addEventListener('click', () => {
-      if (!gameStarted) gameStarted = true;
-      playerJump();
-    });
+        let score = 0;
+        let gameActive = false;
+        let scooby = { x: 50, y: 500, size: 40, dy: 0, jumpPower: -15, gravity: 0.8, grounded: true };
+        let obstacles = [];
+        let frame = 0;
 
-    document.addEventListener('keydown', (e) => {
-      if (e.key === ' ' || e.key === 'ArrowUp') {
-        if (!gameStarted) gameStarted = true;
-        playerJump();
-      }
-    });
+        function drawScooby() {
+            ctx.fillStyle = '#8B4513'; // Color Marrón Scooby
+            ctx.fillRect(scooby.x, scooby.y, scooby.size, scooby.size);
+        }
 
-    // --- Funciones ---
-    function playerJump() {
-      if (player.onGround) {
-        player.ySpeed = jumpForce;
-        player.onGround = false;
-      }
-    }
+        function createObstacle() {
+            if (frame % 100 === 0) {
+                obstacles.push({ x: 400, y: 510, size: 30, speed: 4 });
+            }
+        }
 
-    function spawnObstacle() {
-      obstacles.push({
-        x: canvasWidth,
-        y: groundY,
-        size: 40,
-        color: '#FF0000' // rojo
-      });
-    }
+        function update() {
+            if (!gameActive) {
+                ctx.fillStyle = "white";
+                ctx.textAlign = "center";
+                ctx.fillText("TOCA SALTAR PARA EMPEZAR", 200, 300);
+                return;
+            }
 
-    function update() {
-      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            scooby.dy += scooby.gravity;
+            scooby.y += scooby.dy;
 
-      // Suelo
-      ctx.fillStyle = '#444';
-      ctx.fillRect(0, groundY, canvasWidth, canvasHeight - groundY);
+            if (scooby.y > 500) {
+                scooby.y = 500;
+                scooby.dy = 0;
+                scooby.grounded = true;
+            }
 
-      if (gameStarted) {
-        // Obstáculos
-        if (Math.random() < 0.01) spawnObstacle();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawScooby();
 
-        for (let i = obstacles.length - 1; i >= 0; i--) {
-          obstacles[i].x -= speed;
-          ctx.fillStyle = obstacles[i].color;
-          ctx.fillRect(obstacles[i].x, obstacles[i].y - obstacles[i].size, obstacles[i].size, obstacles[i].size);
+            obstacles.forEach((obs, index) => {
+                obs.x -= obs.speed;
+                ctx.fillStyle = "red";
+                ctx.fillRect(obs.x, obs.y, obs.size, obs.size);
 
-          // Colisión
-          if (
-            player.x < obstacles[i].x + obstacles[i].size &&
-            player.x + player.size > obstacles[i].x &&
-            player.y > obstacles[i].y - obstacles[i].size
-          ) {
-            gameStarted = false;
-            obstacles = [];
-            player.y = groundY;
-            player.ySpeed = 0;
+                if (scooby.x < obs.x + obs.size && scooby.x + scooby.size > obs.x && scooby.y < obs.y + obs.size && scooby.y + scooby.size > obs.y) {
+                    resetGame();
+                }
+
+                if (obs.x + obs.size < 0) {
+                    obstacles.splice(index, 1);
+                    score++;
+                    scoreEl.innerText = score;
+                }
+            });
+
+            createObstacle();
+            frame++;
+            requestAnimationFrame(update);
+        }
+
+        function resetGame() {
             score = 0;
-          }
-
-          // Limpiar obstáculos fuera de pantalla
-          if (obstacles[i].x + obstacles[i].size < 0) obstacles.splice(i, 1);
+            scoreEl.innerText = score;
+            obstacles = [];
+            scooby.y = 500;
+            gameActive = false;
         }
 
-        // Actualizar jugador
-        player.ySpeed += gravity;
-        player.y += player.ySpeed;
-        if (player.y > groundY) {
-          player.y = groundY;
-          player.ySpeed = 0;
-          player.onGround = true;
-        }
+        jumpBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!gameActive) { gameActive = true; update(); }
+            if (scooby.grounded) {
+                scooby.dy = scooby.jumpPower;
+                scooby.grounded = false;
+            }
+        });
 
-        // Score
-        score++;
-      } else {
-        // Mensaje de espera
-        ctx.fillStyle = '#000';
-        ctx.font = '24px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('Toca JUMP para empezar', canvasWidth / 2, canvasHeight / 2);
-      }
-
-      // Dibujar jugador
-      ctx.fillStyle = player.color;
-      ctx.fillRect(player.x, player.y - player.size, player.size, player.size);
-
-      // Dibujar score
-      ctx.fillStyle = '#000';
-      ctx.font = '16px Arial';
-      ctx.textAlign = 'left';
-      ctx.fillText('Score: ' + score, 10, 30);
-
-      requestAnimationFrame(update);
-    }
-
-    update();
-  </script>
+        update();
+    </script>
 </body>
 </html>
