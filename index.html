@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Scooby-Doo Mystery Run - Pro Level</title>
+    <title>Scooby-Doo Mario Edition</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; touch-action: none; }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
@@ -20,14 +20,14 @@
         <div id="ui">
             <div>NIVEL: <span id="level">1</span></div>
             <div>SNACKS: <span id="score">0</span></div>
-            <div>RECORD: <span id="bestScore">0</span></div>
+            <div>TOP: <span id="bestScore">0</span></div>
         </div>
         <div id="startMenu" class="overlay">
-            <h1 style="color:#ccff00">SCOOBY RUN</h1>
+            <h1 style="color:#ccff00">SCOOBY-DOO ADVENTURE</h1>
             <button id="startBtn">START GAME</button>
         </div>
         <div id="gameOver" class="overlay hidden">
-            <h1 style="color:red">¡FANTASMAS!</h1>
+            <h1 style="color:red">¡GAME OVER!</h1>
             <button id="retryBtn">REINTENTAR</button>
         </div>
         <canvas id="gameCanvas"></canvas>
@@ -48,15 +48,11 @@
         const bgMusic = new Audio('DanLebowitzTiptoeOuttheBack.mp4');
         bgMusic.loop = true;
 
-        let score = 0;
-        let level = 1;
-        let gameSpeed = 5; 
+        let score = 0, level = 1, gameSpeed = 5, frame = 0, gameActive = false;
         let highStore = localStorage.getItem('scoobyBest') || 0;
         document.getElementById('bestScore').innerText = highStore;
         
-        let gameActive = false;
-        let bgX = 0; let frame = 0;
-        let obstacles = []; let snacks = [];
+        let bgX = 0, obstacles = [], snacks = [], platforms = [];
         let scooby = { x: 80, y: 335, w: 80, h: 80, dy: 0, gravity: 0.8, jumpPower: -17, jumps: 0 };
 
         function update() {
@@ -68,54 +64,68 @@
             ctx.drawImage(imgBg, bgX, 0, canvas.width, canvas.height);
             ctx.drawImage(imgBg, bgX + canvas.width, 0, canvas.width, canvas.height);
 
+            // Gravedad y Suelo
             scooby.dy += scooby.gravity;
             scooby.y += scooby.dy;
             if (scooby.y > 335) { scooby.y = 335; scooby.dy = 0; scooby.jumps = 0; }
             ctx.drawImage(imgScooby, scooby.x, scooby.y, scooby.w, scooby.h);
 
-            // Obstáculos
-            if (frame % Math.max(60, 130 - (level * 4)) === 0) {
+            // --- ESCALONES TIPO MARIO (NIVEL 2+) ---
+            if (level >= 2 && frame % 180 === 0) {
+                let pW = 100 + Math.random() * 150;
+                let pY = 200 + Math.random() * 100;
+                platforms.push({ x: canvas.width, y: pY, w: pW, h: 20 });
+            }
+            platforms.forEach((p, i) => {
+                p.x -= gameSpeed;
+                ctx.fillStyle = "#8B4513";
+                ctx.fillRect(p.x, p.y, p.w, p.h);
+                ctx.strokeStyle = "#ccff00";
+                ctx.strokeRect(p.x, p.y, p.w, p.h);
+                
+                // Colisión con plataforma (quedarse encima)
+                if (scooby.dy > 0 && scooby.x + 20 < p.x + p.w && scooby.x + scooby.w - 20 > p.x && scooby.y + scooby.h > p.y && scooby.y + scooby.h < p.y + 25) {
+                    scooby.y = p.y - scooby.h;
+                    scooby.dy = 0;
+                    scooby.jumps = 0;
+                }
+                if (p.x < -p.w) platforms.splice(i, 1);
+            });
+
+            // Fantasmas
+            if (frame % Math.max(50, 130 - (level * 5)) === 0) {
                 obstacles.push({ x: canvas.width, y: 345, w: 60, h: 60 });
             }
             obstacles.forEach((obs, i) => {
                 obs.x -= (gameSpeed + 1);
                 ctx.drawImage(imgGhost, obs.x, obs.y, obs.w, obs.h);
-                if (scooby.x + 35 < obs.x + obs.w && scooby.x + scooby.w - 35 > obs.x && scooby.y + 35 < obs.y + obs.h && scooby.y + scooby.h - 35 > obs.y) endGame();
+                if (scooby.x + 30 < obs.x + obs.w && scooby.x + scooby.w - 30 > obs.x && scooby.y + 30 < obs.y + obs.h && scooby.y + scooby.h - 30 > obs.y) endGame();
                 if (obs.x < -100) obstacles.splice(i, 1);
             });
 
-            // Galletas
-            if (frame % 150 === 0) {
-                snacks.push({ x: canvas.width, y: 160 + Math.random() * 80, w: 35, h: 35 });
-            }
+            // Galletas - RANGO DE COMIDA MEJORADO
+            if (frame % 150 === 0) snacks.push({ x: canvas.width, y: 150 + Math.random() * 100, w: 35, h: 35 });
             
             for (let i = snacks.length - 1; i >= 0; i--) {
                 let s = snacks[i];
                 s.x -= gameSpeed;
                 ctx.drawImage(imgSnack, s.x, s.y, s.w, s.h);
                 
-                let scX = scooby.x + 60; 
-                let scY = scooby.y + 40;
-                let snX = s.x + (s.w / 2);
-                let snY = s.y + (s.h / 2);
-
-                let dist = Math.sqrt((scX - snX)**2 + (scY - snY)**2);
-
-                if (dist < 25) {
-                    snacks.splice(i, 1);
+                // DETECCIÓN FRONTAL (APENA TOCA)
+                // Si el borde derecho de la "cara" de Scooby toca la galleta
+                if (scooby.x + 10 < s.x + s.w && 
+                    scooby.x + scooby.w - 10 > s.x && 
+                    scooby.y + 10 < s.y + s.h && 
+                    scooby.y + scooby.h - 10 > s.y) {
+                    
                     score++;
                     document.getElementById('score').innerText = score;
+                    if (score % 15 === 0) { level++; gameSpeed += 0.8; document.getElementById('level').innerText = level; }
                     
-                    // --- CAMBIO A 15 GALLETAS POR NIVEL ---
-                    if (score % 15 === 0) {
-                        level++;
-                        gameSpeed += 0.7; 
-                        document.getElementById('level').innerText = level;
-                    }
-
                     sndEat.currentTime = 0;
                     sndEat.play().catch(() => {});
-                    continue; 
+                    snacks.splice(i, 1);
+                    continue;
                 }
                 if (s.x < -50) snacks.splice(i, 1);
             }
@@ -128,5 +138,33 @@
             gameActive = true; score = 0; level = 1; gameSpeed = 5;
             document.getElementById('score').innerText = 0;
             document.getElementById('level').innerText = 1;
-            obstacles = []; snacks = [];
-            document.getElementById('startMenu').classList.
+            obstacles = []; snacks = []; platforms = [];
+            document.getElementById('startMenu').classList.add('hidden');
+            document.getElementById('gameOver').classList.add('hidden');
+            bgMusic.play().catch(() => {});
+            update();
+        }
+
+        function endGame() {
+            gameActive = false;
+            document.getElementById('gameOver').classList.remove('hidden');
+            bgMusic.pause();
+            if (score > highStore) { highStore = score; localStorage.setItem('scoobyBest', highStore); document.getElementById('bestScore').innerText = highStore; }
+        }
+
+        function jump() {
+            if (gameActive && scooby.jumps < 2) {
+                scooby.dy = scooby.jumpPower;
+                scooby.jumps++;
+                sndJump.currentTime = 0;
+                sndJump.play().catch(() => {});
+            }
+        }
+
+        window.addEventListener('touchstart', (e) => { if(gameActive) { e.preventDefault(); jump(); } }, {passive: false});
+        window.addEventListener('mousedown', jump);
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('retryBtn').addEventListener('click', startGame);
+    </script>
+</body>
+</html>
