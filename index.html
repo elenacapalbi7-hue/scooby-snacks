@@ -19,7 +19,7 @@
 
     <div id="game-container">
         <div id="ui">
-            <div>GALLETAS: <span id="score">0</span></div>
+            <div>SNACKS: <span id="score">0</span></div>
             <div>TOP: <span id="bestScore">0</span></div>
         </div>
 
@@ -42,11 +42,13 @@
         canvas.width = 800;
         canvas.height = 450;
 
+        // IMÁGENES
         const imgScooby = new Image(); imgScooby.src = '4d0e8e93e8663b020f6063451e53118a.png';
         const imgSnack = new Image(); imgSnack.src = 'eb4380a3cf64873dc0ebbad595d0886f.png';
         const imgBg = new Image(); imgBg.src = '1766045750713.png';
         const imgGhost = new Image(); imgGhost.src = '535eb96ca41945fbcd1774e60989d8e3.png';
 
+        // SONIDOS
         const sndJump = new Audio('audio saltoo.mp4');
         const sndEat = new Audio('audio galletaa.mp4');
         const bgMusic = new Audio('Eating sound effects_Free Download _ No Copyright(MP3_160K).mp4');
@@ -61,53 +63,61 @@
         let frame = 0;
         let obstacles = [];
         let snacks = [];
-        let scooby = { x: 80, y: 320, w: 85, h: 85, dy: 0, gravity: 0.8, jumpPower: -16, jumps: 0 };
+        
+        // Ajustamos la posición de Scooby para que no pise las galletas del dibujo de fondo
+        let floorY = 335; 
+        let scooby = { x: 80, y: floorY, w: 90, h: 90, dy: 0, gravity: 0.8, jumpPower: -17, jumps: 0 };
 
         function update() {
             if (!gameActive) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
+            // Fondo
             bgX -= 4;
             if (bgX <= -canvas.width) bgX = 0;
             ctx.drawImage(imgBg, bgX, 0, canvas.width, canvas.height);
             ctx.drawImage(imgBg, bgX + canvas.width, 0, canvas.width, canvas.height);
 
+            // Física de Scooby
             scooby.dy += scooby.gravity;
             scooby.y += scooby.dy;
-            if (scooby.y > 320) { scooby.y = 320; scooby.dy = 0; scooby.jumps = 0; }
-            ctx.drawImage(imgScooby, scooby.x, scooby.y + (scooby.jumps === 0 ? Math.sin(frame * 0.3) * 5 : 0), scooby.w, scooby.h);
+            if (scooby.y > floorY) { 
+                scooby.y = floorY; 
+                scooby.dy = 0; 
+                scooby.jumps = 0; 
+            }
 
-            // Obstáculos
-            if (frame % 115 === 0) obstacles.push({ x: canvas.width, y: 345, w: 70, h: 70 });
+            // Dibujar Scooby (solo la imagen real)
+            ctx.drawImage(imgScooby, scooby.x, scooby.y, scooby.w, scooby.h);
+
+            // Fantasmas reales (los que se mueven)
+            if (frame % 130 === 0) obstacles.push({ x: canvas.width, y: floorY + 10, w: 70, h: 70 });
             obstacles.forEach((obs, i) => {
                 obs.x -= 6;
                 ctx.drawImage(imgGhost, obs.x, obs.y, obs.w, obs.h);
-                if (scooby.x + 20 < obs.x + obs.w - 20 && scooby.x + scooby.w - 20 > obs.x + 20 && scooby.y + 20 < obs.y + obs.h - 20 && scooby.y + scooby.h - 20 > obs.y + 20) {
+                if (scooby.x + 25 < obs.x + obs.w - 25 && scooby.x + scooby.w - 25 > obs.x + 25 && scooby.y + 25 < obs.y + obs.h - 25 && scooby.y + scooby.h - 25 > obs.y + 25) {
                     endGame();
                 }
                 if (obs.x < -100) obstacles.splice(i, 1);
             });
 
-            // Galletas - DETECCIÓN MEJORADA
-            if (frame % 140 === 0) snacks.push({ x: canvas.width, y: 200 + Math.random() * 100, w: 45, h: 45 });
+            // Galletas REALES (Las chiquitas que aparecen volando)
+            if (frame % 160 === 0) {
+                // Las hacemos aparecer más arriba para que no se mezclen con el dibujo del fondo
+                snacks.push({ x: canvas.width, y: 150 + Math.random() * 80, w: 40, h: 40 });
+            }
+
             snacks.forEach((s, i) => {
                 s.x -= 5;
                 ctx.drawImage(imgSnack, s.x, s.y, s.w, s.h);
                 
-                // --- NUEVA LÓGICA DE COLISIÓN ULTRA PRECISA ---
-                // Calculamos el centro de Scooby y el centro de la Galleta
-                let centroScoobyX = scooby.x + scooby.w / 2;
-                let centroScoobyY = scooby.y + scooby.h / 2;
-                let centroGalletaX = s.x + s.w / 2;
-                let centroGalletaY = s.y + s.h / 2;
+                // DETECCIÓN SOLO PARA GALLETAS CHIQUITAS
+                let dx = (scooby.x + scooby.w/2) - (s.x + s.w/2);
+                let dy = (scooby.y + scooby.h/2) - (s.y + s.h/2);
+                let distance = Math.sqrt(dx * dx + dy * dy);
 
-                // Calculamos la distancia real entre los dos centros
-                let dx = centroScoobyX - centroGalletaX;
-                let dy = centroScoobyY - centroGalletaY;
-                let distancia = Math.sqrt(dx * dx + dy * dy);
-
-                // Solo si la distancia es menor a 40 píxeles (están tocándose de verdad)
-                if (distancia < 40) {
+                // Solo suena si toca la galleta chiquita que se mueve (distancia corta)
+                if (distance < 35) {
                     score++;
                     document.getElementById('score').innerText = score;
                     sndEat.currentTime = 0; 
