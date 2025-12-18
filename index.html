@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Scooby-Doo Precision 1px</title>
+    <title>Scooby-Doo Fixed Final</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; touch-action: none; }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
         canvas { background: #111; max-width: 100%; max-height: 100%; object-fit: contain; }
         #ui { position: absolute; top: 15px; width: 90%; display: flex; justify-content: space-between; color: #ccff00; font-size: 20px; text-shadow: 2px 2px #000; pointer-events: none; z-index: 10; }
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; }
-        button { padding: 18px 45px; font-size: 22px; font-weight: bold; background: #ccff00; border: none; border-radius: 40px; cursor: pointer; }
+        button { padding: 18px 45px; font-size: 22px; font-weight: bold; background: #ccff00; border: none; border-radius: 40px; cursor: pointer; color: #000; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -60,17 +60,19 @@
             if (!gameActive) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
+            // Fondo infinito
             bgX -= 4;
             if (bgX <= -canvas.width) bgX = 0;
             ctx.drawImage(imgBg, bgX, 0, canvas.width, canvas.height);
             ctx.drawImage(imgBg, bgX + canvas.width, 0, canvas.width, canvas.height);
 
+            // Scooby
             scooby.dy += scooby.gravity;
             scooby.y += scooby.dy;
             if (scooby.y > 335) { scooby.y = 335; scooby.dy = 0; scooby.jumps = 0; }
             ctx.drawImage(imgScooby, scooby.x, scooby.y, scooby.w, scooby.h);
 
-            // Fantasmas (Enemigos)
+            // Fantasmas reales
             if (frame % 130 === 0) obstacles.push({ x: canvas.width, y: 345, w: 60, h: 60 });
             obstacles.forEach((obs, i) => {
                 obs.x -= 6;
@@ -79,10 +81,10 @@
                 if (obs.x < -100) obstacles.splice(i, 1);
             });
 
-            // Galletas Chiquitas (Premios) - DETECCIÓN DE 1 PÍXEL
+            // --- LÓGICA DE GALLETAS CHIQUITAS ---
             if (frame % 150 === 0) {
-                // Aparecen en el aire para no confundirse con el fondo
-                snacks.push({ x: canvas.width, y: 180 + Math.random() * 80, w: 35, h: 35 });
+                // Aparecen en el aire (fuera de la zona de dibujos del fondo)
+                snacks.push({ x: canvas.width, y: 180 + Math.random() * 60, w: 30, h: 30 });
             }
             
             for (let i = snacks.length - 1; i >= 0; i--) {
@@ -90,24 +92,24 @@
                 s.x -= 5;
                 ctx.drawImage(imgSnack, s.x, s.y, s.w, s.h);
                 
-                // --- DETECCIÓN ULTRA PRECISA (Casi 1 píxel de margen) ---
-                // Calculamos si el centro de Scooby entra en el área de la galletita
-                let scoobyCenterX = scooby.x + (scooby.w / 2);
-                let scoobyCenterY = scooby.y + (scooby.h / 2);
+                // PUNTO DE COLISIÓN MINI (1 píxel)
+                // Usamos el centro exacto de Scooby y el centro de la galleta
+                let scoobyPointX = scooby.x + (scooby.w / 2) + 10; // Un poco adelante
+                let scoobyPointY = scooby.y + (scooby.h / 2);
+                
                 let snackCenterX = s.x + (s.w / 2);
                 let snackCenterY = s.y + (s.h / 2);
 
-                let distanciaX = Math.abs(scoobyCenterX - snackCenterX);
-                let distanciaY = Math.abs(scoobyCenterY - snackCenterY);
+                // Solo suena si el centro de Scooby está a menos de 25 píxeles de la galleta (Contacto directo)
+                let distance = Math.sqrt(Math.pow(scoobyPointX - snackCenterX, 2) + Math.pow(scoobyPointY - snackCenterY, 2));
 
-                // Solo suena si están prácticamente pegados (margen de 5 píxeles para que sea posible ganarlas)
-                if (distanciaX < 15 && distanciaY < 15) {
+                if (distance < 25) {
+                    // ELIMINAR PRIMERO, SONAR DESPUÉS
+                    snacks.splice(i, 1);
                     score++;
                     document.getElementById('score').innerText = score;
                     sndEat.currentTime = 0;
                     sndEat.play().catch(() => {});
-                    // ELIMINAR GALLETA INMEDIATAMENTE: Así no vuelve a sonar nunca más
-                    snacks.splice(i, 1);
                     continue; 
                 }
 
