@@ -3,113 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Scooby-Doo Pro</title>
+    <title>Scooby-Doo: Snack Run Pro</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; touch-action: none; }
-        canvas { display: block; width: 100vw; height: 100vh; object-fit: contain; }
-        #ui { position: absolute; top: 15px; left: 15px; color: #ccff00; font-size: 24px; font-weight: bold; text-shadow: 2px 2px #000; pointer-events: none; z-index: 10; }
-        #gameOver { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: rgba(0,0,0,0.9); color: #ff0000; padding: 30px; border: 4px solid #ccff00; border-radius: 20px; z-index: 30; width: 70%; }
-        #retryBtn { background: #ccff00; color: #000; border: none; padding: 12px 25px; font-size: 18px; font-weight: bold; border-radius: 8px; margin-top: 15px; }
+        /* Bloqueo de scroll y ajuste de pantalla */
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; }
+        
+        /* Contenedor del juego que no permite que nada se estire */
+        #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        canvas { background: #111; max-width: 100%; max-height: 100%; object-fit: contain; box-shadow: 0 0 20px rgba(204, 255, 0, 0.3); }
+
+        /* UI: Puntos y Récord */
+        #ui { position: absolute; top: 15px; width: 90%; display: flex; justify-content: space-between; color: #ccff00; font-size: 20px; text-shadow: 2px 2px #000; pointer-events: none; z-index: 10; }
+        
+        /* Menú de Inicio y Game Over */
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; }
+        h1 { color: #ccff00; font-size: 40px; text-align: center; margin-bottom: 20px; text-shadow: 3px 3px #4b0082; }
+        
+        /* Botón de START personalizado */
+        #startBtn, #retryBtn { padding: 20px 50px; font-size: 24px; font-weight: bold; color: #000; background: #ccff00; border: 4px solid #4b0082; border-radius: 50px; cursor: pointer; box-shadow: 0 5px 15px rgba(204, 255, 0, 0.4); }
+        #startBtn:active { transform: scale(0.95); }
+
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
-    <div id="ui">GALLETAS: <span id="score">0</span></div>
-    <div id="gameOver">
-        <h1>¡GAME OVER!</h1>
-        <p style="color:white">¿Otro intento, Scooby?</p>
-        <button id="retryBtn">REINTENTAR</button>
+
+    <div id="game-container">
+        <div id="ui">
+            <div>SNACKS: <span id="score">0</span></div>
+            <div>TOP: <span id="bestScore">0</span></div>
+        </div>
+
+        <div id="startMenu" class="overlay">
+            <h1>SCOOBY-DOO<br>SNACK RUN</h1>
+            <button id="startBtn">START GAME</button>
+        </div>
+
+        <div id="gameOver" class="overlay hidden">
+            <h1 style="color: #ff0000;">¡FANTASMAS!</h1>
+            <button id="retryBtn">REINTENTAR</button>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
     </div>
-    <canvas id="gameCanvas"></canvas>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const startMenu = document.getElementById('startMenu');
+        const gameOver = document.getElementById('gameOver');
         
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+        // Ajuste de resolución fija para que NO se estire
+        function setupCanvas() {
+            canvas.width = 800;
+            canvas.height = 450;
         }
-        window.addEventListener('resize', resize);
-        resize();
+        setupCanvas();
 
-        // --- TUS IMÁGENES SUBIDAS ---
+        // --- TUS ARCHIVOS (Imágenes) ---
         const imgScooby = new Image(); imgScooby.src = '4d0e8e93e8663b020f6063451e53118a.png';
         const imgSnack = new Image(); imgSnack.src = 'eb4380a3cf64873dc0ebbad595d0886f.png';
         const imgBg = new Image(); imgBg.src = '1766045750713.png';
         const imgGhost = new Image(); imgGhost.src = '535eb96ca41945fbcd1774e60989d8e3.png';
 
-        // --- SONIDOS EXTERNOS (Libres de derechos) ---
-        const sndJump = new Audio('https://www.soundjay.com/buttons/sounds/button-27.mp3');
-        const sndEat = new Audio('https://www.soundjay.com/misc/sounds/crunch-01.mp3');
-        const bgMusic = new Audio('https://www.soundjay.com/free-music/sounds/spooky-music-01.mp3');
+        // --- TUS ARCHIVOS (Sonidos con los nombres que subiste) ---
+        const sndJump = new Audio('audio saltoo.mp4');
+        const sndEat = new Audio('audio galletaa.mp4');
+        const bgMusic = new Audio('aeting sound effects_free download.mp4');
         bgMusic.loop = true;
 
         let score = 0;
+        let highStore = localStorage.getItem('scoobyBest') || 0;
+        document.getElementById('bestScore').innerText = highStore;
+        
         let gameActive = false;
-        let isGameOver = false;
         let bgX = 0;
         let frame = 0;
         let obstacles = [];
         let snacks = [];
 
-        // Scooby con DOBLE SALTO para esquivar grupos
-        let scooby = { x: 50, y: 0, size: 90, dy: 0, gravity: 0.6, jumpPower: -15, jumps: 0 };
+        // Scooby con Doble Salto
+        let scooby = { x: 80, y: 320, w: 100, h: 100, dy: 0, gravity: 0.8, jumpPower: -16, jumps: 0 };
 
         function update() {
-            if (!gameActive || isGameOver) {
-                if (!isGameOver) {
-                    ctx.fillStyle = "black"; ctx.fillRect(0,0,canvas.width,canvas.height);
-                    ctx.fillStyle = "#ccff00"; ctx.textAlign = "center"; ctx.font = "22px Arial";
-                    ctx.fillText("¡TOCA PARA EMPEZAR!", canvas.width/2, canvas.height/2);
-                }
-                return;
-            }
+            if (!gameActive) return;
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Fondo Infinito
-            bgX -= 3;
+            // 1. Fondo infinito (Ajustado para no estirar)
+            bgX -= 4;
             if (bgX <= -canvas.width) bgX = 0;
             ctx.drawImage(imgBg, bgX, 0, canvas.width, canvas.height);
             ctx.drawImage(imgBg, bgX + canvas.width, 0, canvas.width, canvas.height);
 
-            // Física de Scooby
+            // 2. Física de Scooby
             scooby.dy += scooby.gravity;
             scooby.y += scooby.dy;
-            const floorLine = canvas.height * 0.72;
-            if (scooby.y > floorLine) {
-                scooby.y = floorLine;
-                scooby.dy = 0;
-                scooby.jumps = 0;
-            }
-
+            if (scooby.y > 320) { scooby.y = 320; scooby.dy = 0; scooby.jumps = 0; }
+            
             // Animación de correr
-            let run = scooby.jumps === 0 ? Math.sin(frame * 0.25) * 6 : 0;
-            ctx.drawImage(imgScooby, scooby.x, scooby.y + run, scooby.size, scooby.size);
+            let runCycle = scooby.jumps === 0 ? Math.sin(frame * 0.3) * 6 : 0;
+            ctx.drawImage(imgScooby, scooby.x, scooby.y + runCycle, scooby.w, scooby.h);
 
-            // Obstáculos Aleatorios
-            if (frame % (Math.floor(Math.random() * 50) + 110) === 0) {
-                obstacles.push({ x: canvas.width, y: floorLine + 10, w: 75, h: 75, speed: 5 });
-            }
+            // 3. Obstáculos (Fantasmas)
+            if (frame % 110 === 0) obstacles.push({ x: canvas.width, y: 340, w: 70, h: 70 });
             obstacles.forEach((obs, i) => {
-                obs.x -= obs.speed;
+                obs.x -= 6;
                 ctx.drawImage(imgGhost, obs.x, obs.y, obs.w, obs.h);
-                if (scooby.x < obs.x + 50 && scooby.x + 60 > obs.x && scooby.y < obs.y + 50 && scooby.y + 60 > obs.y) {
-                    isGameOver = true;
-                    document.getElementById('gameOver').style.display = 'block';
-                    bgMusic.pause();
+                // Colisión
+                if (scooby.x < obs.x + 40 && scooby.x + 60 > obs.x && scooby.y < obs.y + 40 && scooby.y + 60 > obs.y) {
+                    endGame();
                 }
                 if (obs.x < -100) obstacles.splice(i, 1);
             });
 
-            // Galletas en diferentes alturas
-            if (frame % 140 === 0) snacks.push({ x: canvas.width, y: floorLine - (Math.random() * 150 + 50), size: 55 });
+            // 4. Galletas (Snacks)
+            if (frame % 150 === 0) snacks.push({ x: canvas.width, y: 180 + Math.random() * 100, w: 50, h: 50 });
             snacks.forEach((s, i) => {
-                s.x -= 4;
-                ctx.drawImage(imgSnack, s.x, s.y, s.size, s.size);
-                if (scooby.x < s.x + 50 && scooby.x + 60 > s.x && scooby.y < s.y + 50 && scooby.y + 60 > s.y) {
-                    score++; document.getElementById('score').innerText = score;
-                    sndEat.play(); snacks.splice(i, 1);
+                s.x -= 5;
+                ctx.drawImage(imgSnack, s.x, s.y, s.w, s.h);
+                if (scooby.x < s.x + 40 && scooby.x + 60 > s.x && scooby.y < s.y + 40 && scooby.y + 60 > s.y) {
+                    score++;
+                    document.getElementById('score').innerText = score;
+                    sndEat.play().catch(() => {});
+                    snacks.splice(i, 1);
                 }
             });
 
@@ -117,22 +134,45 @@
             requestAnimationFrame(update);
         }
 
-        window.addEventListener('touchstart', (e) => {
-            if (isGameOver) return;
-            e.preventDefault();
-            if (!gameActive) { gameActive = true; bgMusic.play(); update(); }
-            if (scooby.jumps < 2) { 
-                scooby.dy = scooby.jumpPower; 
-                scooby.jumps++; 
-                sndJump.play(); 
+        function startGame() {
+            gameActive = true;
+            score = 0;
+            document.getElementById('score').innerText = 0;
+            obstacles = [];
+            snacks = [];
+            startMenu.classList.add('hidden');
+            gameOver.classList.add('hidden');
+            bgMusic.play().catch(() => {});
+            update();
+        }
+
+        function endGame() {
+            gameActive = false;
+            gameOver.classList.remove('hidden');
+            bgMusic.pause();
+            if (score > highStore) {
+                highStore = score;
+                localStorage.setItem('scoobyBest', highStore);
+                document.getElementById('bestScore').innerText = highStore;
             }
-        }, {passive: false});
+        }
 
-        document.getElementById('retryBtn').addEventListener('click', () => {
-            location.reload();
-        });
+        // Controles de Salto (Touch y Click)
+        function handleAction() {
+            if (!gameActive) return;
+            if (scooby.jumps < 2) {
+                scooby.dy = scooby.jumpPower;
+                scooby.jumps++;
+                sndJump.play().catch(() => {});
+            }
+        }
 
-        update();
+        window.addEventListener('touchstart', (e) => { e.preventDefault(); handleAction(); }, {passive: false});
+        window.addEventListener('mousedown', handleAction);
+        
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('retryBtn').addEventListener('click', startGame);
+
     </script>
 </body>
 </html>
