@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Scooby-Doo Precision</title>
+    <title>Scooby-Doo Precision 1px</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; touch-action: none; }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
@@ -18,7 +18,7 @@
 
     <div id="game-container">
         <div id="ui">
-            <div>SNACKS: <span id="score">0</span></div>
+            <div>GALLETAS: <span id="score">0</span></div>
             <div>TOP: <span id="bestScore">0</span></div>
         </div>
         <div id="startMenu" class="overlay">
@@ -70,44 +70,49 @@
             if (scooby.y > 335) { scooby.y = 335; scooby.dy = 0; scooby.jumps = 0; }
             ctx.drawImage(imgScooby, scooby.x, scooby.y, scooby.w, scooby.h);
 
-            // Fantasmas
+            // Fantasmas (Enemigos)
             if (frame % 130 === 0) obstacles.push({ x: canvas.width, y: 345, w: 60, h: 60 });
             obstacles.forEach((obs, i) => {
                 obs.x -= 6;
                 ctx.drawImage(imgGhost, obs.x, obs.y, obs.w, obs.h);
-                // Colisión fantasma (más permisiva para que no sea tan difícil)
-                if (scooby.x + 30 < obs.x + obs.w && scooby.x + scooby.w - 30 > obs.x && scooby.y + 30 < obs.y + obs.h && scooby.y + scooby.h - 30 > obs.y) endGame();
+                if (scooby.x + 35 < obs.x + obs.w && scooby.x + scooby.w - 35 > obs.x && scooby.y + 35 < obs.y + obs.h && scooby.y + scooby.h - 35 > obs.y) endGame();
                 if (obs.x < -100) obstacles.splice(i, 1);
             });
 
-            // Galletas - CORRECCIÓN DEFINITIVA DE SONIDO
-            if (frame % 150 === 0) snacks.push({ x: canvas.width, y: 150 + Math.random() * 100, w: 35, h: 35, eaten: false });
+            // Galletas Chiquitas (Premios) - DETECCIÓN DE 1 PÍXEL
+            if (frame % 150 === 0) {
+                // Aparecen en el aire para no confundirse con el fondo
+                snacks.push({ x: canvas.width, y: 180 + Math.random() * 80, w: 35, h: 35 });
+            }
             
-            snacks.forEach((s, i) => {
+            for (let i = snacks.length - 1; i >= 0; i--) {
+                let s = snacks[i];
                 s.x -= 5;
-                if (!s.eaten) {
-                    ctx.drawImage(imgSnack, s.x, s.y, s.w, s.h);
-                    
-                    // Solo detectamos el choque si el CENTRO de Scooby toca la galleta
-                    let scoobyCenterX = scooby.x + (scooby.w / 2);
-                    let scoobyCenterY = scooby.y + (scooby.h / 2);
-                    let snackCenterX = s.x + (s.w / 2);
-                    let snackCenterY = s.y + (s.h / 2);
+                ctx.drawImage(imgSnack, s.x, s.y, s.w, s.h);
+                
+                // --- DETECCIÓN ULTRA PRECISA (Casi 1 píxel de margen) ---
+                // Calculamos si el centro de Scooby entra en el área de la galletita
+                let scoobyCenterX = scooby.x + (scooby.w / 2);
+                let scoobyCenterY = scooby.y + (scooby.h / 2);
+                let snackCenterX = s.x + (s.w / 2);
+                let snackCenterY = s.y + (s.h / 2);
 
-                    let dist = Math.sqrt(Math.pow(scoobyCenterX - snackCenterX, 2) + Math.pow(scoobyCenterY - snackCenterY, 2));
+                let distanciaX = Math.abs(scoobyCenterX - snackCenterX);
+                let distanciaY = Math.abs(scoobyCenterY - snackCenterY);
 
-                    // DISTANCIA CORTA (30px): Solo suena cuando está literalmente encima
-                    if (dist < 35) {
-                        s.eaten = true; // Marcamos como comida para que NO vuelva a sonar
-                        score++;
-                        document.getElementById('score').innerText = score;
-                        sndEat.currentTime = 0;
-                        sndEat.play().catch(() => {});
-                        snacks.splice(i, 1);
-                    }
+                // Solo suena si están prácticamente pegados (margen de 5 píxeles para que sea posible ganarlas)
+                if (distanciaX < 15 && distanciaY < 15) {
+                    score++;
+                    document.getElementById('score').innerText = score;
+                    sndEat.currentTime = 0;
+                    sndEat.play().catch(() => {});
+                    // ELIMINAR GALLETA INMEDIATAMENTE: Así no vuelve a sonar nunca más
+                    snacks.splice(i, 1);
+                    continue; 
                 }
+
                 if (s.x < -50) snacks.splice(i, 1);
-            });
+            }
 
             frame++;
             requestAnimationFrame(update);
