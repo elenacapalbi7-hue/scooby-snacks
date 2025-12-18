@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Scooby Dash - Torneo Oficial</title>
+    <title>Scooby Dash - Salto Instantáneo</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; touch-action: none; color: white; }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
-        canvas { background: #111; max-width: 100%; max-height: 100%; border-top: 2px solid #ccff00; border-bottom: 2px solid #ccff00; }
+        canvas { background: #111; max-width: 100%; max-height: 100%; border-top: 2px solid #ccff00; border-bottom: 2px solid #ccff00; display: block; }
         #ui { position: absolute; top: 10px; width: 95%; display: flex; justify-content: space-between; color: #ccff00; font-size: 14px; font-weight: bold; z-index: 100; pointer-events: none; }
         .menu { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; text-align: center; }
         .btn-main { padding: 20px 50px; font-size: 24px; background: #ccff00; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; box-shadow: 0 0 20px rgba(204, 255, 0, 0.6); text-transform: uppercase; }
@@ -27,7 +27,7 @@
         <div id="mainMenu" class="menu">
             <h1 style="color:#ccff00; font-size: 40px; margin-bottom: 10px;">SCOOBY DASH</h1>
             <p style="margin-bottom: 30px;">RECOLECTA 10 PARA SUBIR DE NIVEL</p>
-            <button class="btn-main" onclick="startGame()">INICIAR TORNEO</button>
+            <button class="btn-main" id="btnStart">INICIAR TORNEO</button>
         </div>
 
         <div id="deathMenu" class="menu hidden">
@@ -36,7 +36,7 @@
             <div style="color:#ccff00">MEJOR PUNTAJE: <span id="bestDisplay">0</span></div>
             <div id="vCode" class="verif-code"></div>
             <br>
-            <button class="btn-main" onclick="startGame()">REINTENTAR</button>
+            <button class="btn-main" id="btnRestart">REINTENTAR</button>
         </div>
 
         <canvas id="c"></canvas>
@@ -51,6 +51,7 @@
         const imgG = new Image(); imgG.src = 'eb4380a3cf64873dc0ebbad595d0886f.png';
         const imgB = new Image(); imgB.src = '1766045750713.png';
         const imgF = new Image(); imgF.src = '535eb96ca41945fbcd1774e60989d8e3.png';
+        
         const sndJ = new Audio('audio saltoo.mp4');
         const sndE = new Audio('audio galletaa.mp4');
         const bgM = new Audio('DanLebowitzTiptoeOuttheBack.mp4'); bgM.loop = true;
@@ -59,7 +60,6 @@
         let scooby = { x: 70, y: 330, w: 80, h: 80, dy: 0, jumps: 0 };
         let obs = [], snacks = [], platforms = [], bgX = 0;
 
-        // Recuperar el TOP SCORE guardado al abrir el juego
         let highStore = localStorage.getItem('scooby_top') || 0;
         document.getElementById('topSc').innerText = highStore;
 
@@ -80,19 +80,31 @@
             bgX -= (speed - 1); if(bgX <= -800) bgX = 0;
             ctx.drawImage(imgB, bgX, 0, 800, 450); ctx.drawImage(imgB, bgX+800, 0, 800, 450);
 
-            scooby.dy += 0.9; scooby.y += scooby.dy;
-            if(scooby.y > 330) { scooby.y = 330; scooby.dy = 0; scooby.jumps = 0; }
+            scooby.dy += 0.95; // Gravedad un poco más firme
+            scooby.y += scooby.dy;
+
+            // Suelo firme
+            if(scooby.y >= 330) { 
+                scooby.y = 330; 
+                scooby.dy = 0; 
+                scooby.jumps = 0; // Reinicio de saltos al tocar suelo
+            }
             ctx.drawImage(imgS, scooby.x, scooby.y, scooby.w, scooby.h);
 
+            // Escalones Nivel 3+
             if(level >= 3 && frame % 140 === 0) platforms.push({x: 800, y: 220, w: 160, h: 20});
             platforms.forEach((p, i) => {
                 p.x -= speed;
                 ctx.fillStyle = "#8B4513"; ctx.fillRect(p.x, p.y, p.w, p.h);
+                // Colisión escalón
                 if(scooby.dy > 0 && scooby.x < p.x+p.w && scooby.x+scooby.w > p.x && scooby.y+scooby.h > p.y && scooby.y+scooby.h < p.y+25) {
-                    scooby.y = p.y - scooby.h; scooby.dy = 0; scooby.jumps = 0;
+                    scooby.y = p.y - scooby.h; 
+                    scooby.dy = 0; 
+                    scooby.jumps = 0; // Reinicio de saltos al pisar escalón
                 }
             });
 
+            // Obstáculos y Galletas (Resto de la lógica igual)
             if(frame % Math.max(30, 120-(level*8)) === 0) obs.push({x: 800, y: (level>=4?Math.random()*300:340), w: 55, h: 55});
             obs.forEach((o, i) => {
                 o.x -= (speed + 2); ctx.drawImage(imgF, o.x, o.y, o.w, o.h);
@@ -113,14 +125,8 @@
 
         function endGame() {
             active = false; bgM.pause();
-            
-            // Lógica de Mejor Puntaje
             let currentTop = localStorage.getItem('scooby_top') || 0;
-            if (score > currentTop) {
-                localStorage.setItem('scooby_top', score);
-                currentTop = score;
-            }
-            
+            if (score > currentTop) { localStorage.setItem('scooby_top', score); currentTop = score; }
             document.getElementById('topSc').innerText = currentTop;
             document.getElementById('bestDisplay').innerText = currentTop;
             document.getElementById('finalScoreDisplay').innerText = score;
@@ -128,17 +134,27 @@
             document.getElementById('deathMenu').classList.remove('hidden');
         }
 
-        function jump(e) {
+        // --- SISTEMA DE SALTO ULTRA RÁPIDO ---
+        function executeJump() {
             if(!active) return;
-            if(e && e.target.tagName !== 'BUTTON') {
-                if(scooby.jumps < 2) {
-                    scooby.dy = -17; scooby.jumps++;
-                    sndJ.currentTime = 0; sndJ.play().catch(()=>{});
-                }
+            if(scooby.jumps < 2) {
+                scooby.dy = -17.5; // Salto potente
+                scooby.jumps++;
+                sndJ.currentTime = 0; 
+                sndJ.play().catch(()=>{});
             }
         }
-        window.addEventListener('touchstart', jump, {passive: false});
-        window.addEventListener('mousedown', jump);
+
+        // Listener de alta velocidad para móviles
+        window.addEventListener('pointerdown', (e) => {
+            if(e.target.tagName !== 'BUTTON') {
+                e.preventDefault();
+                executeJump();
+            }
+        }, {passive: false});
+
+        document.getElementById('btnStart').onclick = startGame;
+        document.getElementById('btnRestart').onclick = startGame;
     </script>
 </body>
 </html>
