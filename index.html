@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Scooby Pro</title>
+    <title>Scooby Dash Pro</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; touch-action: none; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Arial', sans-serif; touch-action: none; }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
-        canvas { background: #111; max-width: 100%; max-height: 100%; border: 2px solid #ccff00; display: block; }
-        #ui { position: absolute; top: 10px; width: 90%; display: flex; justify-content: space-between; color: #ccff00; font-size: 18px; font-weight: bold; z-index: 100; pointer-events: none; }
-        #startBtn { position: absolute; padding: 20px 50px; font-size: 24px; background: #ccff00; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; z-index: 200; }
+        canvas { background: #111; max-width: 100%; max-height: 100%; border: 2px solid #ccff00; }
+        #ui { position: absolute; top: 15px; width: 90%; display: flex; justify-content: space-between; color: #ccff00; font-size: 20px; font-weight: bold; z-index: 100; pointer-events: none; text-shadow: 2px 2px #000; }
+        #startBtn { position: absolute; padding: 20px 60px; font-size: 26px; background: #ccff00; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; z-index: 200; box-shadow: 0 0 20px #ccff00; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -17,7 +17,7 @@
 
     <div id="game-container">
         <div id="ui">
-            <div>NIVEL: <span id="lv">1</span></div>
+            <div>NIVEL <span id="lv">1</span></div>
             <div>GALLETAS: <span id="sc">0</span></div>
         </div>
         <button id="startBtn" onclick="startGame()">JUGAR</button>
@@ -25,20 +25,21 @@
     </div>
 
     <script>
-        const canvas = document.getElementById('c');
-        const ctx = canvas.getContext('c').getContext('2d'); // Fix rápido de contexto
-    </script>
-    <script>
         const c = document.getElementById('c');
         const ctx = c.getContext('2d');
         c.width = 800; c.height = 450;
 
+        // Imágenes
         const imgS = new Image(); imgS.src = '4d0e8e93e8663b020f6063451e53118a.png';
         const imgG = new Image(); imgG.src = 'eb4380a3cf64873dc0ebbad595d0886f.png';
         const imgB = new Image(); imgB.src = '1766045750713.png';
         const imgF = new Image(); imgF.src = '535eb96ca41945fbcd1774e60989d8e3.png';
+
+        // Audios (Usando tu archivo de GitHub)
         const sndJ = new Audio('audio saltoo.mp4');
         const sndE = new Audio('audio galletaa.mp4');
+        const bgMusic = new Audio('DanLebowitzTiptoeOuttheBack.mp4');
+        bgMusic.loop = true;
 
         let score = 0, level = 1, speed = 6, active = false, frame = 0;
         let scooby = { x: 70, y: 330, w: 80, h: 80, dy: 0, jumps: 0 };
@@ -48,6 +49,11 @@
             active = true; score = 0; level = 1; speed = 6; obs = []; snacks = []; platforms = [];
             scooby.y = 330; scooby.dy = 0; scooby.jumps = 0;
             document.getElementById('startBtn').classList.add('hidden');
+            
+            // Iniciar música
+            bgMusic.currentTime = 0;
+            bgMusic.play().catch(e => console.log("Error al iniciar música"));
+            
             animate();
         }
 
@@ -59,17 +65,16 @@
             bgX -= (speed - 1); if(bgX <= -800) bgX = 0;
             ctx.drawImage(imgB, bgX, 0, 800, 450); ctx.drawImage(imgB, bgX + 800, 0, 800, 450);
 
-            // Gravedad constante para todos los niveles (Doble salto siempre activo)
+            // Gravedad y Movimiento
             scooby.dy += 0.9; 
             scooby.y += scooby.dy;
 
-            // Suelo fijo
+            // Suelo
             if(scooby.y > 330) { scooby.y = 330; scooby.dy = 0; scooby.jumps = 0; }
             ctx.drawImage(imgS, scooby.x, scooby.y, scooby.w, scooby.h);
 
-            // --- NIVELES ---
-            // Nivel 1 y 2: Suelo limpio.
-            // Nivel 3: Aparecen escalones.
+            // --- LÓGICA DE NIVELES ---
+            // Nivel 3+: Aparecen escalones tipo Mario
             if(level >= 3 && frame % 140 === 0) {
                 platforms.push({x: 800, y: 220, w: 160, h: 20});
             }
@@ -77,22 +82,24 @@
             platforms.forEach((p, i) => {
                 p.x -= speed;
                 ctx.fillStyle = "#8B4513"; ctx.fillRect(p.x, p.y, p.w, p.h);
-                // Colisión con escalón
                 if(scooby.dy > 0 && scooby.x < p.x+p.w && scooby.x+scooby.w > p.x && scooby.y+scooby.h > p.y && scooby.y+scooby.h < p.y+25) {
                     scooby.y = p.y - scooby.h; scooby.dy = 0; scooby.jumps = 0;
                 }
             });
 
-            // Fantasmas
+            // Fantasmas (A partir del nivel 4 vuelan un poco más)
             if(frame % Math.max(30, 120 - (level*8)) === 0) {
-                let yP = (level >= 4) ? Math.random() * 300 : 340; // Nivel 4: Fantasmas vuelan
+                let yP = (level >= 4) ? Math.random() * 300 : 340;
                 obs.push({x: 800, y: yP, w: 50, h: 50});
             }
             obs.forEach((o, i) => {
                 o.x -= (speed + 2);
                 ctx.drawImage(imgF, o.x, o.y, o.w, o.h);
                 if(scooby.x+20 < o.x+30 && scooby.x+60 > o.x && scooby.y+20 < o.y+30 && scooby.y+60 > o.y) {
-                    active = false; document.getElementById('startBtn').classList.remove('hidden');
+                    active = false; 
+                    bgMusic.pause();
+                    document.getElementById('startBtn').classList.remove('hidden');
+                    document.getElementById('startBtn').innerText = "REINTENTAR";
                 }
             });
 
@@ -101,9 +108,14 @@
             snacks.forEach((s, i) => {
                 s.x -= speed; ctx.drawImage(imgG, s.x, s.y, s.w, s.h);
                 if(scooby.x < s.x+40 && scooby.x+80 > s.x && scooby.y < s.y+40 && scooby.y+80 > s.y) {
-                    snacks.splice(i,1); score++; sndE.play();
+                    snacks.splice(i,1); score++; 
+                    sndE.currentTime = 0; sndE.play();
                     document.getElementById('sc').innerText = score;
-                    if(score % 10 === 0) { level++; speed += 1.5; document.getElementById('lv').innerText = level; }
+                    if(score % 10 === 0) { 
+                        level++; 
+                        speed += 1.3; 
+                        document.getElementById('lv').innerText = level; 
+                    }
                 }
             });
 
@@ -111,20 +123,19 @@
             requestAnimationFrame(animate);
         }
 
-        // SALTO INSTANTÁNEO
+        // SALTO INSTANTÁNEO CON DOBLE SALTO
         function jump(e) {
             if(!active) return;
             if(e) e.preventDefault(); 
             
             if(scooby.jumps < 2) {
-                scooby.dy = -17; // Impulso fuerte
+                scooby.dy = -17;
                 scooby.jumps++;
-                sndJ.currentTime = 0; // Reinicia audio para que suene rápido
-                sndJ.play();
+                sndJ.currentTime = 0;
+                sndJ.play().catch(()=>{});
             }
         }
 
-        // Listener de alta prioridad
         window.addEventListener('touchstart', jump, {passive: false});
         window.addEventListener('mousedown', jump);
     </script>
