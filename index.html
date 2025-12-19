@@ -3,40 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scooby: Gran Final Torneo</title>
+    <title>Scooby: MODO AUTOPILOTO (VIDEO)</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; touch-action: none; -webkit-user-select: none; }
-        #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
-        canvas { background: #111; max-width: 100%; max-height: 100%; border: 3px solid #ccff00; }
-        #ui { position: absolute; top: 10px; width: 92%; display: flex; justify-content: space-between; color: #ccff00; font-family: sans-serif; font-weight: bold; z-index: 100; pointer-events: none; text-shadow: 2px 2px #000; }
-        .menu { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; color: white; font-family: sans-serif; text-align: center; }
-        .btn-main { padding: 18px 50px; font-size: 22px; background: #ccff00; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; color: black; box-shadow: 0 6px 0 #88aa00; }
-        .btn-main:active { transform: translateY(4px); box-shadow: none; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; touch-action: none; }
+        canvas { background: #111; display: block; margin: auto; border: 3px solid #ccff00; }
+        #ui { position: absolute; top: 10px; width: 100%; display: flex; justify-content: space-around; color: #ccff00; font-family: sans-serif; font-weight: bold; pointer-events: none; text-shadow: 2px 2px #000; }
     </style>
 </head>
 <body>
-
-    <div id="game-container">
-        <div id="ui">
-            <div>MODO: <span id="modeName">CARGANDO</span></div>
-            <div>🍪: <span id="sc">0</span></div>
-            <div>TOP: <span id="topSc">0</span></div>
-        </div>
-
-        <div id="mainMenu" class="menu">
-            <h1 style="color:#ccff00; font-size: 35px;">SCOOBY: EL GRAN FINAL</h1>
-            <p>Niveles 1 al 25 - ¿Podrás ser el Maestro?</p>
-            <button class="btn-main" onpointerdown="startGame(event)">¡INICIAR TORNEO!</button>
-        </div>
-
-        <div id="deathMenu" class="menu" style="display:none;">
-            <h1 style="color:red; font-size: 40px;">¡GAME OVER!</h1>
-            <h2 id="finalScore" style="font-size: 60px;">0</h2>
-            <button class="btn-main" onpointerdown="startGame(event)">REINTENTAR</button>
-        </div>
-
-        <canvas id="c"></canvas>
+    <div id="ui">
+        <div>MODO: <span id="modeName">AUTOPILOTO ACTIVO</span></div>
+        <div>🍪: <span id="sc">0</span></div>
+        <div>NIVEL: <span id="lvDisplay">1</span></div>
     </div>
+    <canvas id="c"></canvas>
 
     <script>
         const canvas = document.getElementById('c');
@@ -52,132 +32,80 @@
         const sndE = new Audio('audio galletaa.mp4');
         const bgM = new Audio('DanLebowitzTiptoeOuttheBack.mp4'); bgM.loop = true;
 
-        let score = 0, level = 1, speed = 7, active = false, frame = 0, gravity = 0.95;
+        let score = 0, level = 1, speed = 7, active = true, frame = 0, gravity = 0.95;
         let scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0 };
         let obs = [], snacks = [], bgX = 0;
-        let finalRandomMode = 0;
 
-        document.getElementById('topSc').innerText = localStorage.getItem('scooby_top') || 0;
-
-        function startGame(e) {
-            if(e) e.stopPropagation();
-            active = true; score = 0; level = 1; speed = 7; obs = []; snacks = []; frame = 0;
-            scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0 }; gravity = 0.95;
-            document.getElementById('mainMenu').style.display = 'none';
-            document.getElementById('deathMenu').style.display = 'none';
-            bgM.play().catch(()=>{});
-            requestAnimationFrame(animate);
-        }
+        // Iniciar música y juego automáticamente para el video
+        window.onload = () => { bgM.play().catch(()=>{}); animate(); };
 
         function handleInput() {
-            if(!active) return;
+            if (level === 17) { scooby.dy = 12; }
+            else if (level === 21) { scooby.x += 100; scooby.dy = -15; }
+            else { if(scooby.jumps < 2) { scooby.dy = -17; scooby.jumps++; } }
             sndJ.currentTime = 0; sndJ.play().catch(()=>{});
-
-            if (level === 22) { scooby.dy = -20; } // Súper rebote
-            else if (level === 17) { scooby.dy = 12; }
-            else if (level === 21) { scooby.x += 100; if(scooby.x > 600) scooby.x = 600; scooby.dy = -15; }
-            else { 
-                if(scooby.jumps < 2) { scooby.dy = -17; scooby.jumps++; }
-            }
         }
 
-        window.onpointerdown = (e) => { if(active && e.target.tagName !== 'BUTTON') { e.preventDefault(); handleInput(); } };
-
         function animate() {
-            if (!active) return;
             ctx.clearRect(0,0,800,450);
             
-            let currentSpeed = speed;
-            if (level === 23) currentSpeed = speed * 0.3; // Cámara lenta
+            // --- CÓDIGO DE LA IA (AUTOPILOTO) ---
+            let targetObs = obs.find(o => o.x > scooby.x);
+            if (targetObs) {
+                let dist = targetObs.x - scooby.x;
+                // Salta si el obstáculo está cerca (distancia depende de la velocidad)
+                if (dist < (speed * 15) && (scooby.y > 300 || (level === 17 && scooby.y < 100))) {
+                    handleInput();
+                }
+            }
+            // Evitar que el viento lo saque
+            if (level === 9 && scooby.x < 50) handleInput();
+            // Salto constante en nivel 22 (Rebote)
+            if (level === 22 && scooby.y >= 330) handleInput();
 
-            bgX -= (currentSpeed/2); if(bgX <= -800) bgX = 0;
+            // Dibujar fondo
+            bgX -= (speed/2); if(bgX <= -800) bgX = 0;
             ctx.drawImage(imgB, bgX, 0, 800, 450); ctx.drawImage(imgB, bgX+800, 0, 800, 450);
 
             scooby.dy += gravity;
             scooby.y += scooby.dy;
 
-            // --- LÓGICA DE NIVELES (22 AL 25) ---
-            if (level < 22) {
-                // Físicas básicas para niveles previos
-                if(level === 17) gravity = -0.95;
-                else if(level === 8) gravity = 0.15;
-                else gravity = 0.95;
-                document.getElementById('modeName').innerText = level + ". AVANCE";
-                if(level !== 17 && scooby.y > 330) { scooby.y = 330; scooby.dy = 0; scooby.jumps = 0; }
-                if(level === 17 && scooby.y < 20) { scooby.y = 20; scooby.dy = 0; scooby.jumps = 0; }
-            } 
-            else if (level === 22) {
-                document.getElementById('modeName').innerText = "22. REBOTE";
-                gravity = 1.2;
-                if(scooby.y > 330) { scooby.dy = -15; scooby.y = 330; } // Rebote automático
-            } else if (level === 23) {
-                document.getElementById('modeName').innerText = "23. MATRIX";
-                gravity = 0.2; // Caída lenta
-                if(scooby.y > 330) { scooby.y = 330; scooby.dy = 0; scooby.jumps = 0; }
-            } else if (level === 24) {
-                document.getElementById('modeName').innerText = "24. OSCURIDAD";
-                gravity = 0.95;
-                if(scooby.y > 330) { scooby.y = 330; scooby.dy = 0; scooby.jumps = 0; }
-            } else if (level >= 25) {
-                document.getElementById('modeName').innerText = "25. MAESTRO ★";
-                if(frame % 300 === 0) finalRandomMode = Math.floor(Math.random() * 5);
-                // Cambia mecánicas cada 5 segundos
-                if(finalRandomMode === 1) gravity = -0.95; else gravity = 0.95;
-                if(scooby.y > 330) { scooby.y = 330; scooby.dy = 0; scooby.jumps = 0; }
-            }
+            // Configuración de niveles (Simplificada para que la IA no falle)
+            if (level === 17) gravity = -0.95; else gravity = 0.95;
+            if (level !== 17 && scooby.y > 330) { scooby.y = 330; scooby.dy = 0; scooby.jumps = 0; }
+            if (level === 17 && scooby.y < 20) { scooby.y = 20; scooby.dy = 0; scooby.jumps = 0; }
 
-            // Dibujar Scooby
             ctx.drawImage(imgS, scooby.x, scooby.y, scooby.w, scooby.h);
 
-            // Efecto Oscuridad (Nivel 24)
-            if(level === 24) {
-                ctx.fillStyle = "black";
-                ctx.beginPath();
-                ctx.rect(0,0,800,450);
-                ctx.arc(scooby.x + 40, scooby.y + 40, 120, 0, Math.PI * 2, true);
-                ctx.fill();
-            }
-
             // Obstáculos
-            let spawnRate = (level === 23) ? 30 : 80;
-            if(frame % spawnRate === 0 && level !== 4) {
-                let obsY = (level === 17 || (level === 25 && gravity < 0)) ? 20 : 335;
+            if(frame % 80 === 0) {
+                let obsY = (level === 17) ? 20 : 335;
                 obs.push({x: 800, y: obsY, w: 60, h: 60});
             }
             for(let i=obs.length-1; i>=0; i--) {
-                obs[i].x -= (currentSpeed + 2);
+                obs[i].x -= (speed + 2);
                 ctx.drawImage(imgF, obs[i].x, obs[i].y, obs[i].w, obs[i].h);
-                if(scooby.x+10 < obs[i].x+40 && scooby.x+scooby.w-10 > obs[i].x && scooby.y+10 < obs[i].y+40 && scooby.y+scooby.h-10 > obs[i].y) endGame();
-                if(obs[i].x < -100) obs.splice(i, 1);
+                // INMORTALIDAD PARA EL VIDEO: Si choca, solo borra el fantasma
+                if(scooby.x < obs[i].x+40 && scooby.x+40 > obs[i].x && scooby.y < obs[i].y+40 && scooby.y+40 > obs[i].y) {
+                    obs.splice(i, 1);
+                }
+                if(obs[i] && obs[i].x < -100) obs.splice(i, 1);
             }
 
-            // Galletas
-            if(frame % 70 === 0) snacks.push({x: 800, y: 100 + Math.random()*250, w: 45, h: 45});
+            // Galletas (Aumenta nivel cada 10)
+            if(frame % 70 === 0) snacks.push({x: 800, y: 150 + Math.random()*150, w: 45, h: 45});
             for(let i=snacks.length-1; i>=0; i--){
-                snacks[i].x -= currentSpeed;
+                snacks[i].x -= speed;
                 ctx.drawImage(imgG, snacks[i].x, snacks[i].y, snacks[i].w, snacks[i].h);
-                if(scooby.x < snacks[i].x+40 && scooby.x+scooby.w > snacks[i].x && scooby.y < snacks[i].y+40 && scooby.y+scooby.h > snacks[i].y) {
-                    snacks.splice(i,1); score++; sndE.play().catch(()=>{});
+                if(scooby.x < snacks[i].x+40 && scooby.x+70 > snacks[i].x && scooby.y < snacks[i].y+40 && scooby.y+70 > snacks[i].y) {
+                    score++; snacks.splice(i,1);
                     document.getElementById('sc').innerText = score;
-                    if(score > 0 && score % 10 === 0) { 
-                        level++; speed += 0.4; obs = []; 
-                        if(level < 25) scooby.x = 80;
-                    }
+                    if(score % 10 === 0) { level++; speed += 0.3; document.getElementById('lvDisplay').innerText = level; }
                 }
-                if(snacks[i] && snacks[i].x < -100) snacks.splice(i,1);
             }
 
             frame++;
-            if(active) requestAnimationFrame(animate);
-        }
-
-        function endGame() {
-            active = false; bgM.pause();
-            let top = localStorage.getItem('scooby_top') || 0;
-            if(score > top) { localStorage.setItem('scooby_top', score); top = score; }
-            document.getElementById('topSc').innerText = top;
-            document.getElementById('finalScore').innerText = score;
-            document.getElementById('deathMenu').style.display = 'flex';
+            requestAnimationFrame(animate);
         }
     </script>
 </body>
