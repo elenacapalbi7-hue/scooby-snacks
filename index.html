@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scooby: IA MAESTRA 25 NIVELES</title>
+    <title>Scooby: IA PROFESIONAL (Video Tutorial)</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; touch-action: none; }
         canvas { background: #111; display: block; margin: auto; border: 3px solid #ccff00; }
@@ -12,7 +12,7 @@
 </head>
 <body>
     <div id="ui">
-        <div>MODO: <span id="modeName">INICIANDO</span></div>
+        <div>MODO: <span id="modeName">PROCESANDO</span></div>
         <div>🍪: <span id="sc">0</span></div>
         <div>NIVEL: <span id="lvDisplay">1</span></div>
     </div>
@@ -38,13 +38,12 @@
 
         window.onload = () => { bgM.play().catch(()=>{}); animate(); };
 
-        function botJump() {
-            if (level === 17) { scooby.dy = 12; } // Nivel Techo
-            else if (level === 21) { scooby.x += 100; scooby.dy = -15; } // Teleport
-            else if (level === 2 || level === 4) { scooby.dy = -8; } // Modos vuelo/agua
+        function executeJump() {
+            if (level === 17) { scooby.dy = 14; }
+            else if (level === 21) { scooby.x += 100; if(scooby.x > 300) scooby.x = 80; scooby.dy = -15; }
             else { 
                 if(scooby.jumps < 2) { 
-                    scooby.dy = -17; 
+                    scooby.dy = -18; 
                     scooby.jumps++; 
                     sndJ.currentTime = 0; sndJ.play().catch(()=>{});
                 }
@@ -53,86 +52,106 @@
 
         function animate() {
             ctx.clearRect(0,0,800,450);
-            
-            // --- LÓGICA DE NIVELES (ESPEJO DEL JUEGO REAL) ---
+            level = Math.floor(score / 10) + 1;
             document.getElementById('lvDisplay').innerText = level;
-            
+
+            // --- SELECTOR DE MECÁNICAS REALES ---
             if (level === 2) { document.getElementById('modeName').innerText = "SUBMARINO"; gravity = 0.3; }
-            else if (level === 3) { document.getElementById('modeName').innerText = "VAGONETA"; gravity = 1.3; speed = 11; }
+            else if (level === 3) { document.getElementById('modeName').innerText = "VAGONETA"; gravity = 1.3; speed = 10; }
             else if (level === 4) { document.getElementById('modeName').innerText = "AVIONETA"; gravity = 0.6; }
-            else if (level === 5) { document.getElementById('modeName').innerText = "GRAVEDAD X"; /* Auto-inversión lógica */ }
-            else if (level === 7) { document.getElementById('modeName').innerText = "PESADO"; gravity = 2.3; }
+            else if (level === 7) { document.getElementById('modeName').innerText = "PESADO"; gravity = 2.4; }
             else if (level === 8) { document.getElementById('modeName').innerText = "LUNAR"; gravity = 0.15; }
+            else if (level === 9) { document.getElementById('modeName').innerText = "VIENTO"; gravity = 0.95; scooby.x -= 0.3; }
             else if (level === 13) { document.getElementById('modeName').innerText = "MINI"; scooby.w = 40; scooby.h = 40; }
-            else if (level === 14) { document.getElementById('modeName').innerText = "GIGANTE"; scooby.w = 150; scooby.h = 150; }
+            else if (level === 14) { document.getElementById('modeName').innerText = "GIGANTE"; scooby.w = 140; scooby.h = 140; }
             else if (level === 17) { document.getElementById('modeName').innerText = "TECHO"; gravity = -0.95; }
+            else if (level === 22) { document.getElementById('modeName').innerText = "REBOTE"; gravity = 1.2; }
             else if (level === 23) { document.getElementById('modeName').innerText = "MATRIX"; speed = 4; }
-            else { document.getElementById('modeName').innerText = "TORNEO"; gravity = 0.95; scooby.w = 75; scooby.h = 75; }
+            else if (level === 24) { document.getElementById('modeName').innerText = "OSCURIDAD"; gravity = 0.95; }
+            else { document.getElementById('modeName').innerText = "TORNEO"; gravity = 0.95; scooby.w = 75; scooby.h = 75; if(level !== 9) scooby.x = 80; }
 
-            // --- IA: DECIDIR CUÁNDO SALTAR ---
-            let nearObs = obs.find(o => o.x > scooby.x && o.x < scooby.x + 200);
-            let nearSnack = snacks.find(s => s.x > scooby.x && s.x < scooby.x + 180);
+            // --- IA AVANZADA: DECISIÓN DE SALTO ---
+            let danger = obs.find(o => o.x > scooby.x && o.x < scooby.x + 180);
+            let food = snacks.find(s => s.x > scooby.x && s.x < scooby.x + 250);
 
-            // Saltar por obstáculo
-            if (nearObs && scooby.jumps === 0) {
-                if (level !== 17 && scooby.y > 300) botJump();
-                if (level === 17 && scooby.y < 100) botJump();
+            // 1. Prioridad: Salvarse de fantasmas
+            if (danger && scooby.jumps === 0) {
+                if (level === 17 && scooby.y < 120) executeJump();
+                else if (level !== 17 && scooby.y > 280) executeJump();
             }
 
-            // DOBLE SALTO para galletas altas
-            if (nearSnack && nearSnack.y < scooby.y - 60 && scooby.jumps === 1 && scooby.dy > -2) {
-                botJump();
+            // 2. Prioridad: Comer galletas (incluso con doble salto)
+            if (food && !danger) {
+                if (level !== 17) {
+                    if (food.y < scooby.y - 40 && scooby.jumps < 2) executeJump();
+                } else {
+                    if (food.y > scooby.y + 40 && scooby.jumps < 2) executeJump();
+                }
             }
+            if (level === 22 && scooby.y > 320) executeJump(); // Rebote automático
 
-            // Salto automático para nivel 22 (Rebote)
-            if (level === 22 && (scooby.y > 320 || scooby.y < 30)) botJump();
-
-            // --- FÍSICA Y DIBUJO ---
+            // --- FÍSICA ---
             scooby.dy += gravity;
             scooby.y += scooby.dy;
 
-            // Colisiones Suelo/Techo según nivel
-            if(level !== 17 && scooby.y > (450 - scooby.h - 45)) { scooby.y = 450 - scooby.h - 45; scooby.dy = 0; scooby.jumps = 0; }
+            // Límites de suelo/techo (Scooby no desaparece)
+            let groundY = 450 - scooby.h - 40;
+            if(level !== 17 && scooby.y > groundY) { scooby.y = groundY; scooby.dy = 0; scooby.jumps = 0; }
             if(level === 17 && scooby.y < 20) { scooby.y = 20; scooby.dy = 0; scooby.jumps = 0; }
 
+            // Fondo
             bgX -= (speed/2); if(bgX <= -800) bgX = 0;
             ctx.drawImage(imgB, bgX, 0, 800, 450); ctx.drawImage(imgB, bgX+800, 0, 800, 450);
             
-            if(level === 15) ctx.globalAlpha = Math.sin(frame * 0.1) > 0 ? 1 : 0.2;
+            // Dibujar Scooby (Siempre visible)
+            if(level === 15) ctx.globalAlpha = Math.sin(frame * 0.1) > 0 ? 1 : 0.3;
             ctx.drawImage(imgS, scooby.x, scooby.y, scooby.w, scooby.h);
             ctx.globalAlpha = 1;
 
-            // Obstáculos (Fantasmas)
-            if(frame % 90 === 0 && level !== 4) {
-                let yPos = (level === 17) ? 20 : 335;
-                obs.push({x: 800, y: yPos, w: 60, h: 60});
+            // Oscuridad Nivel 24
+            if(level === 24) {
+                ctx.fillStyle = "black";
+                ctx.beginPath();
+                ctx.rect(0,0,800,450);
+                ctx.arc(scooby.x+scooby.w/2, scooby.y+scooby.h/2, 130, 0, Math.PI*2, true);
+                ctx.fill();
             }
-            if(level === 4 && frame % 70 === 0) {
+
+            // Obstáculos (Fantasmas reales, NO se atraviesan)
+            if(frame % 85 === 0 && level !== 4) {
+                let yF = (level === 17) ? 20 : 335;
+                obs.push({x: 800, y: yF, w: 60, h: 60});
+            }
+            if(level === 4 && frame % 60 === 0) {
                 obs.push({x: 800, y: 0, w: 60, h: 140}, {x: 800, y: 310, w: 60, h: 140});
             }
 
             for(let i=obs.length-1; i>=0; i--) {
-                obs[i].x -= (speed + 2);
+                obs[i].x -= (speed + 2.5);
                 ctx.drawImage(imgF, obs[i].x, obs[i].y, obs[i].w, obs[i].h);
-                // Inmortalidad para video: borra al chocar
-                if(scooby.x < obs[i].x+40 && scooby.x+scooby.w-10 > obs[i].x && scooby.y < obs[i].y+40 && scooby.y+scooby.h-10 > obs[i].y) obs.splice(i,1);
+                // Si la IA falla, resetea el obstáculo para que el video no se corte
+                if(scooby.x < obs[i].x+40 && scooby.x+scooby.w-10 > obs[i].x && scooby.y < obs[i].y+40 && scooby.y+scooby.h-10 > obs[i].y) {
+                    obs.splice(i,1); 
+                }
                 if(obs[i] && obs[i].x < -100) obs.splice(i, 1);
             }
 
-            // Galletas
-            if(frame % 75 === 0) snacks.push({x: 800, y: 100 + Math.random()*220, w: 45, h: 45});
+            // Galletas (Frecuencia alta para subir rápido de nivel)
+            if(frame % 50 === 0) snacks.push({x: 800, y: 80 + Math.random()*260, w: 45, h: 45});
             for(let i=snacks.length-1; i>=0; i--){
                 snacks[i].x -= speed;
                 ctx.drawImage(imgG, snacks[i].x, snacks[i].y, snacks[i].w, snacks[i].h);
                 if(scooby.x < snacks[i].x+40 && scooby.x+scooby.w > snacks[i].x && scooby.y < snacks[i].y+40 && scooby.y+scooby.h > snacks[i].y) {
                     score++; snacks.splice(i,1); sndE.play().catch(()=>{});
                     document.getElementById('sc').innerText = score;
-                    if(score % 10 === 0) { level++; speed += 0.3; }
+                    if(score % 10 === 0 && speed < 16) speed += 0.3;
                 }
+                if(snacks[i] && snacks[i].x < -100) snacks.splice(i,1);
             }
 
             frame++;
-            requestAnimationFrame(animate);
+            if(level <= 25) requestAnimationFrame(animate);
+            else { document.getElementById('modeName').innerText = "TORNEO COMPLETADO"; }
         }
     </script>
 </body>
