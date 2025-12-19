@@ -25,14 +25,14 @@
 
         <div id="mainMenu" class="menu">
             <h1 style="color:#ccff00; font-size: 35px;">SCOOBY: TORNEO INFINITO</h1>
-            <p>Los niveles no tienen fin. ¿Hasta cuál podrás llegar?</p>
+            <p>¡Supera el Nivel 25 para reiniciar con más velocidad!</p>
             <button class="btn-main" onpointerdown="startGame(event)">¡JUGAR!</button>
         </div>
 
         <div id="deathMenu" class="menu" style="display:none;">
             <h1 style="color:red; font-size: 40px;">¡GAME OVER!</h1>
             <h2 id="finalScore" style="font-size: 60px;">0</h2>
-            <p id="finalLevel" style="color:#ccff00;"></p>
+            <p id="finalLevel" style="color:#ccff00; font-weight: bold;"></p>
             <button class="btn-main" onpointerdown="startGame(event)">REINTENTAR</button>
         </div>
 
@@ -44,14 +44,18 @@
         const ctx = canvas.getContext('2d');
         canvas.width = 800; canvas.height = 450;
 
+        // Imágenes
         const imgS = new Image(); imgS.src = '4d0e8e93e8663b020f6063451e53118a.png';
         const imgG = new Image(); imgG.src = 'eb4380a3cf64873dc0ebbad595d0886f.png';
         const imgB = new Image(); imgB.src = '1766045750713.png';
         const imgF = new Image(); imgF.src = '535eb96ca41945fbcd1774e60989d8e3.png';
         
+        // Audios
         const sndJ = new Audio('audio saltoo.mp4');
         const sndE = new Audio('audio galletaa.mp4');
-        const bgM = new Audio('DanLebowitzTiptoeOuttheBack.mp4'); bgM.loop = true;
+        const bgM = new Audio('DanLebowitzTiptoeOuttheBack.mp4');
+        bgM.loop = true; // Reinicia automáticamente al terminar
+        bgM.addEventListener('ended', function() { this.currentTime = 0; this.play(); }, false);
 
         let score = 0, level = 1, speed = 7, active = false, frame = 0, gravity = 0.95;
         let scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0 };
@@ -63,7 +67,11 @@
             scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0 }; gravity = 0.95;
             document.getElementById('mainMenu').style.display = 'none';
             document.getElementById('deathMenu').style.display = 'none';
-            bgM.play().catch(()=>{});
+            
+            // Iniciar música
+            bgM.currentTime = 0;
+            bgM.play().catch(error => console.log("Error de audio:", error));
+            
             requestAnimationFrame(animate);
         }
 
@@ -87,7 +95,6 @@
             if (!active) return;
             ctx.clearRect(0,0,800,450);
             
-            // La mecánica se repite cada 25, pero el nivel sigue subiendo
             let mechanic = ((level - 1) % 25) + 1;
             document.getElementById('lvDisplay').innerText = level;
 
@@ -164,7 +171,8 @@
         }
 
         function endGame() {
-            active = false; bgM.pause();
+            active = false; 
+            bgM.pause(); // Se detiene al perder
             document.getElementById('finalScore').innerText = score;
             document.getElementById('finalLevel').innerText = "Llegaste al Nivel: " + level;
             document.getElementById('deathMenu').style.display = 'flex';
