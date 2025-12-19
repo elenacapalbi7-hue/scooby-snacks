@@ -3,20 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scooby: IA PROFESIONAL (Video Tutorial)</title>
+    <title>Scooby: Torneo Infinito</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; touch-action: none; }
-        canvas { background: #111; display: block; margin: auto; border: 3px solid #ccff00; }
-        #ui { position: absolute; top: 10px; width: 100%; display: flex; justify-content: space-around; color: #ccff00; font-family: sans-serif; font-weight: bold; pointer-events: none; text-shadow: 2px 2px #000; z-index: 10; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; touch-action: none; -webkit-user-select: none; }
+        #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        canvas { background: #111; max-width: 100%; max-height: 100%; border: 3px solid #ccff00; }
+        #ui { position: absolute; top: 10px; width: 92%; display: flex; justify-content: space-between; color: #ccff00; font-family: sans-serif; font-weight: bold; z-index: 100; pointer-events: none; text-shadow: 2px 2px #000; }
+        .menu { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; color: white; font-family: sans-serif; text-align: center; }
+        .btn-main { padding: 18px 50px; font-size: 22px; background: #ccff00; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; color: black; box-shadow: 0 6px 0 #88aa00; }
+        .btn-main:active { transform: translateY(4px); box-shadow: none; }
     </style>
 </head>
 <body>
-    <div id="ui">
-        <div>MODO: <span id="modeName">PROCESANDO</span></div>
-        <div>🍪: <span id="sc">0</span></div>
-        <div>NIVEL: <span id="lvDisplay">1</span></div>
+
+    <div id="game-container">
+        <div id="ui">
+            <div>MODO: <span id="modeName">ESPERANDO</span></div>
+            <div>🍪: <span id="sc">0</span></div>
+            <div>NIVEL: <span id="lvDisplay">1</span></div>
+        </div>
+
+        <div id="mainMenu" class="menu">
+            <h1 style="color:#ccff00; font-size: 35px;">SCOOBY: TORNEO INFINITO</h1>
+            <p>Los niveles no tienen fin. ¿Hasta cuál podrás llegar?</p>
+            <button class="btn-main" onpointerdown="startGame(event)">¡JUGAR!</button>
+        </div>
+
+        <div id="deathMenu" class="menu" style="display:none;">
+            <h1 style="color:red; font-size: 40px;">¡GAME OVER!</h1>
+            <h2 id="finalScore" style="font-size: 60px;">0</h2>
+            <p id="finalLevel" style="color:#ccff00;"></p>
+            <button class="btn-main" onpointerdown="startGame(event)">REINTENTAR</button>
+        </div>
+
+        <canvas id="c"></canvas>
     </div>
-    <canvas id="c"></canvas>
 
     <script>
         const canvas = document.getElementById('c');
@@ -32,126 +53,121 @@
         const sndE = new Audio('audio galletaa.mp4');
         const bgM = new Audio('DanLebowitzTiptoeOuttheBack.mp4'); bgM.loop = true;
 
-        let score = 0, level = 1, speed = 7, frame = 0, gravity = 0.95;
+        let score = 0, level = 1, speed = 7, active = false, frame = 0, gravity = 0.95;
         let scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0 };
         let obs = [], snacks = [], bgX = 0;
 
-        window.onload = () => { bgM.play().catch(()=>{}); animate(); };
+        function startGame(e) {
+            if(e) e.stopPropagation();
+            active = true; score = 0; level = 1; speed = 7; obs = []; snacks = []; frame = 0;
+            scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0 }; gravity = 0.95;
+            document.getElementById('mainMenu').style.display = 'none';
+            document.getElementById('deathMenu').style.display = 'none';
+            bgM.play().catch(()=>{});
+            requestAnimationFrame(animate);
+        }
 
-        function executeJump() {
-            if (level === 17) { scooby.dy = 14; }
-            else if (level === 21) { scooby.x += 100; if(scooby.x > 300) scooby.x = 80; scooby.dy = -15; }
+        function handleInput() {
+            if(!active) return;
+            sndJ.currentTime = 0; sndJ.play().catch(()=>{});
+
+            let mechanic = ((level - 1) % 25) + 1;
+
+            if (mechanic === 17) { scooby.dy = 12; } 
+            else if (mechanic === 21) { scooby.x += 100; if(scooby.x > 500) scooby.x = 80; scooby.dy = -15; }
+            else if (mechanic === 2 || mechanic === 4) { scooby.dy = -10; }
             else { 
-                if(scooby.jumps < 2) { 
-                    scooby.dy = -18; 
-                    scooby.jumps++; 
-                    sndJ.currentTime = 0; sndJ.play().catch(()=>{});
-                }
+                if(scooby.jumps < 2) { scooby.dy = -17; scooby.jumps++; }
             }
         }
 
+        window.onpointerdown = (e) => { if(active && e.target.tagName !== 'BUTTON') { e.preventDefault(); handleInput(); } };
+
         function animate() {
+            if (!active) return;
             ctx.clearRect(0,0,800,450);
-            level = Math.floor(score / 10) + 1;
+            
+            // La mecánica se repite cada 25, pero el nivel sigue subiendo
+            let mechanic = ((level - 1) % 25) + 1;
             document.getElementById('lvDisplay').innerText = level;
 
-            // --- SELECTOR DE MECÁNICAS REALES ---
-            if (level === 2) { document.getElementById('modeName').innerText = "SUBMARINO"; gravity = 0.3; }
-            else if (level === 3) { document.getElementById('modeName').innerText = "VAGONETA"; gravity = 1.3; speed = 10; }
-            else if (level === 4) { document.getElementById('modeName').innerText = "AVIONETA"; gravity = 0.6; }
-            else if (level === 7) { document.getElementById('modeName').innerText = "PESADO"; gravity = 2.4; }
-            else if (level === 8) { document.getElementById('modeName').innerText = "LUNAR"; gravity = 0.15; }
-            else if (level === 9) { document.getElementById('modeName').innerText = "VIENTO"; gravity = 0.95; scooby.x -= 0.3; }
-            else if (level === 13) { document.getElementById('modeName').innerText = "MINI"; scooby.w = 40; scooby.h = 40; }
-            else if (level === 14) { document.getElementById('modeName').innerText = "GIGANTE"; scooby.w = 140; scooby.h = 140; }
-            else if (level === 17) { document.getElementById('modeName').innerText = "TECHO"; gravity = -0.95; }
-            else if (level === 22) { document.getElementById('modeName').innerText = "REBOTE"; gravity = 1.2; }
-            else if (level === 23) { document.getElementById('modeName').innerText = "MATRIX"; speed = 4; }
-            else if (level === 24) { document.getElementById('modeName').innerText = "OSCURIDAD"; gravity = 0.95; }
-            else { document.getElementById('modeName').innerText = "TORNEO"; gravity = 0.95; scooby.w = 75; scooby.h = 75; if(level !== 9) scooby.x = 80; }
+            // --- LÓGICA DE MECÁNICAS ---
+            if (mechanic === 2) { document.getElementById('modeName').innerText = "SUBMARINO"; gravity = 0.3; }
+            else if (mechanic === 3) { document.getElementById('modeName').innerText = "VAGONETA"; gravity = 1.3; }
+            else if (mechanic === 4) { document.getElementById('modeName').innerText = "AVIONETA"; gravity = 0.6; }
+            else if (mechanic === 7) { document.getElementById('modeName').innerText = "PESADO"; gravity = 2.3; }
+            else if (mechanic === 8) { document.getElementById('modeName').innerText = "LUNAR"; gravity = 0.15; }
+            else if (mechanic === 9) { document.getElementById('modeName').innerText = "VIENTO"; gravity = 0.95; scooby.x -= 0.5; if(scooby.x < -30) endGame(); }
+            else if (mechanic === 13) { document.getElementById('modeName').innerText = "MINI"; scooby.w = 40; scooby.h = 40; }
+            else if (mechanic === 14) { document.getElementById('modeName').innerText = "GIGANTE"; scooby.w = 140; scooby.h = 140; }
+            else if (mechanic === 17) { document.getElementById('modeName').innerText = "TECHO"; gravity = -0.95; }
+            else if (mechanic === 22) { document.getElementById('modeName').innerText = "REBOTE"; gravity = 1.2; }
+            else if (mechanic === 23) { document.getElementById('modeName').innerText = "MATRIX"; } 
+            else if (mechanic === 24) { document.getElementById('modeName').innerText = "OSCURIDAD"; }
+            else { document.getElementById('modeName').innerText = "TORNEO"; gravity = 0.95; scooby.w = 75; scooby.h = 75; if(mechanic !== 9) scooby.x = 80; }
 
-            // --- IA AVANZADA: DECISIÓN DE SALTO ---
-            let danger = obs.find(o => o.x > scooby.x && o.x < scooby.x + 180);
-            let food = snacks.find(s => s.x > scooby.x && s.x < scooby.x + 250);
+            let currentSpeed = (mechanic === 23) ? speed * 0.5 : speed;
 
-            // 1. Prioridad: Salvarse de fantasmas
-            if (danger && scooby.jumps === 0) {
-                if (level === 17 && scooby.y < 120) executeJump();
-                else if (level !== 17 && scooby.y > 280) executeJump();
-            }
-
-            // 2. Prioridad: Comer galletas (incluso con doble salto)
-            if (food && !danger) {
-                if (level !== 17) {
-                    if (food.y < scooby.y - 40 && scooby.jumps < 2) executeJump();
-                } else {
-                    if (food.y > scooby.y + 40 && scooby.jumps < 2) executeJump();
-                }
-            }
-            if (level === 22 && scooby.y > 320) executeJump(); // Rebote automático
-
-            // --- FÍSICA ---
             scooby.dy += gravity;
             scooby.y += scooby.dy;
 
-            // Límites de suelo/techo (Scooby no desaparece)
-            let groundY = 450 - scooby.h - 40;
-            if(level !== 17 && scooby.y > groundY) { scooby.y = groundY; scooby.dy = 0; scooby.jumps = 0; }
-            if(level === 17 && scooby.y < 20) { scooby.y = 20; scooby.dy = 0; scooby.jumps = 0; }
+            let groundLimit = 450 - scooby.h - 40;
+            if(mechanic !== 17 && scooby.y > groundLimit) { scooby.y = groundLimit; scooby.dy = 0; scooby.jumps = 0; }
+            if(mechanic === 17 && scooby.y < 20) { scooby.y = 20; scooby.dy = 0; scooby.jumps = 0; }
 
-            // Fondo
-            bgX -= (speed/2); if(bgX <= -800) bgX = 0;
+            bgX -= (currentSpeed/2); if(bgX <= -800) bgX = 0;
             ctx.drawImage(imgB, bgX, 0, 800, 450); ctx.drawImage(imgB, bgX+800, 0, 800, 450);
             
-            // Dibujar Scooby (Siempre visible)
-            if(level === 15) ctx.globalAlpha = Math.sin(frame * 0.1) > 0 ? 1 : 0.3;
+            if(mechanic === 15) ctx.globalAlpha = Math.sin(frame * 0.1) > 0 ? 1 : 0.3;
             ctx.drawImage(imgS, scooby.x, scooby.y, scooby.w, scooby.h);
             ctx.globalAlpha = 1;
 
-            // Oscuridad Nivel 24
-            if(level === 24) {
-                ctx.fillStyle = "black";
-                ctx.beginPath();
-                ctx.rect(0,0,800,450);
-                ctx.arc(scooby.x+scooby.w/2, scooby.y+scooby.h/2, 130, 0, Math.PI*2, true);
-                ctx.fill();
+            if(mechanic === 24) {
+                ctx.fillStyle = "black"; ctx.beginPath(); ctx.rect(0,0,800,450);
+                ctx.arc(scooby.x+scooby.w/2, scooby.y+scooby.h/2, 120, 0, Math.PI*2, true); ctx.fill();
             }
 
-            // Obstáculos (Fantasmas reales, NO se atraviesan)
-            if(frame % 85 === 0 && level !== 4) {
-                let yF = (level === 17) ? 20 : 335;
+            // Obstáculos
+            if(frame % 85 === 0 && mechanic !== 4) {
+                let yF = (mechanic === 17) ? 20 : 335;
                 obs.push({x: 800, y: yF, w: 60, h: 60});
             }
-            if(level === 4 && frame % 60 === 0) {
+            if(mechanic === 4 && frame % 70 === 0) {
                 obs.push({x: 800, y: 0, w: 60, h: 140}, {x: 800, y: 310, w: 60, h: 140});
             }
 
             for(let i=obs.length-1; i>=0; i--) {
-                obs[i].x -= (speed + 2.5);
+                obs[i].x -= (currentSpeed + 2.5);
                 ctx.drawImage(imgF, obs[i].x, obs[i].y, obs[i].w, obs[i].h);
-                // Si la IA falla, resetea el obstáculo para que el video no se corte
-                if(scooby.x < obs[i].x+40 && scooby.x+scooby.w-10 > obs[i].x && scooby.y < obs[i].y+40 && scooby.y+scooby.h-10 > obs[i].y) {
-                    obs.splice(i,1); 
-                }
-                if(obs[i] && obs[i].x < -100) obs.splice(i, 1);
+                if(scooby.x+15 < obs[i].x+45 && scooby.x+scooby.w-15 > obs[i].x && scooby.y+15 < obs[i].y+45 && scooby.y+scooby.h-15 > obs[i].y) endGame();
+                if(obs[i].x < -100) obs.splice(i, 1);
             }
 
-            // Galletas (Frecuencia alta para subir rápido de nivel)
-            if(frame % 50 === 0) snacks.push({x: 800, y: 80 + Math.random()*260, w: 45, h: 45});
+            // Galletas
+            if(frame % 70 === 0) snacks.push({x: 800, y: 100 + Math.random()*230, w: 45, h: 45});
             for(let i=snacks.length-1; i>=0; i--){
-                snacks[i].x -= speed;
+                snacks[i].x -= currentSpeed;
                 ctx.drawImage(imgG, snacks[i].x, snacks[i].y, snacks[i].w, snacks[i].h);
                 if(scooby.x < snacks[i].x+40 && scooby.x+scooby.w > snacks[i].x && scooby.y < snacks[i].y+40 && scooby.y+scooby.h > snacks[i].y) {
                     score++; snacks.splice(i,1); sndE.play().catch(()=>{});
                     document.getElementById('sc').innerText = score;
-                    if(score % 10 === 0 && speed < 16) speed += 0.3;
+                    if(score % 10 === 0) { 
+                        level++; 
+                        if(level % 5 === 0) speed += 1.3; else speed += 0.3;
+                    }
                 }
                 if(snacks[i] && snacks[i].x < -100) snacks.splice(i,1);
             }
 
             frame++;
-            if(level <= 25) requestAnimationFrame(animate);
-            else { document.getElementById('modeName').innerText = "TORNEO COMPLETADO"; }
+            if(active) requestAnimationFrame(animate);
+        }
+
+        function endGame() {
+            active = false; bgM.pause();
+            document.getElementById('finalScore').innerText = score;
+            document.getElementById('finalLevel').innerText = "Llegaste al Nivel: " + level;
+            document.getElementById('deathMenu').style.display = 'flex';
         }
     </script>
 </body>
