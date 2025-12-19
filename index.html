@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scooby: Torneo de Destrezas</title>
+    <title>Scooby: Torneo Maestro</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; touch-action: none; -webkit-user-select: none; }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
@@ -24,9 +24,9 @@
         </div>
 
         <div id="mainMenu" class="menu">
-            <h1 style="color:#ccff00; font-size: 35px;">SCOOBY: EL TORNEO</h1>
-            <p>¿Podrás superar los 6 juegos?</p>
-            <button class="btn-main" onpointerdown="startGame(event)">¡ACEPTAR RETO!</button>
+            <h1 style="color:#ccff00; font-size: 35px;">SCOOBY: TORNEO NIVEL 11</h1>
+            <p>¡Supera las 60 galletas para ver lo nuevo!</p>
+            <button class="btn-main" onpointerdown="startGame(event)">¡JUGAR AHORA!</button>
         </div>
 
         <div id="deathMenu" class="menu" style="display:none;">
@@ -61,7 +61,7 @@
         function startGame(e) {
             if(e) e.stopPropagation();
             active = true; score = 0; level = 1; speed = 7; obs = []; snacks = []; frame = 0;
-            scooby.y = 330; scooby.dy = 0; scooby.jumps = 0; gravity = 0.95;
+            scooby.x = 80; scooby.y = 330; scooby.dy = 0; scooby.jumps = 0; gravity = 0.95;
             document.getElementById('mainMenu').style.display = 'none';
             document.getElementById('deathMenu').style.display = 'none';
             bgM.play().catch(()=>{});
@@ -72,11 +72,13 @@
             if(!active) return;
             sndJ.currentTime = 0; sndJ.play().catch(()=>{});
 
-            if (level === 2) scooby.dy = -7; // Nadar
-            else if (level === 4) scooby.dy = -10; // Flappy
-            else if (level === 5) { gravity = -gravity; scooby.dy = gravity * 12; } // Gravedad
-            else if (level === 6) scooby.dy = -12; // Modo Dios
-            else { // Clásico y Vagoneta
+            // Lógica de salto según nivel
+            if (level === 2) scooby.dy = -7; 
+            else if (level === 4) scooby.dy = -10; 
+            else if (level === 5) { gravity = -gravity; scooby.dy = gravity * 12; } 
+            else if (level === 6) scooby.dy = -12;
+            else if (level === 9) { scooby.dy = -17; scooby.x += 15; if(scooby.x > 80) scooby.x = 80; } // Viento: salta y recupera posición
+            else { 
                 if(scooby.jumps < 2) { scooby.dy = -17; scooby.jumps++; }
             }
         }
@@ -98,7 +100,7 @@
             scooby.dy += gravity;
             scooby.y += scooby.dy;
 
-            // --- LÓGICA DE DESTREZA POR NIVEL ---
+            // --- SELECTOR DE NIVELES ---
             if (level === 1) {
                 document.getElementById('modeName').innerText = "1. CORREDOR";
                 if(scooby.y > 330) { scooby.y = 330; scooby.dy = 0; scooby.jumps = 0; }
@@ -119,27 +121,55 @@
                 document.getElementById('modeName').innerText = "5. GRAVEDAD X";
                 if(scooby.y > 330) { scooby.y = 330; scooby.dy = 0; }
                 if(scooby.y < 0) { scooby.y = 0; scooby.dy = 0; }
-            } else {
+            } else if (level === 6) {
                 document.getElementById('modeName').innerText = "6. DIOS (MAX)";
                 gravity = 0.8; speed = 14;
                 if(scooby.y > 450 || scooby.y < -50) endGame();
+            } else if (level === 7) {
+                document.getElementById('modeName').innerText = "7. PESADO";
+                gravity = 2.3; 
+                if(scooby.y > 330) { scooby.y = 330; scooby.dy = 0; scooby.jumps = 0; }
+            } else if (level === 8) {
+                document.getElementById('modeName').innerText = "8. LUNAR";
+                gravity = 0.15;
+                if(scooby.y > 330) { scooby.y = 330; scooby.dy = 0; scooby.jumps = 0; }
+                if(scooby.y < 0) { scooby.y = 0; scooby.dy = 2; }
+            } else if (level === 9) {
+                document.getElementById('modeName').innerText = "9. VIENTO";
+                gravity = 0.95; scooby.x -= 0.8; 
+                if(scooby.x < -50) endGame();
+                if(scooby.y > 330) { scooby.y = 330; scooby.dy = 0; scooby.jumps = 0; }
+            } else if (level === 10) {
+                document.getElementById('modeName').innerText = "10. HIELO";
+                speed = 13 + Math.sin(frame * 0.05) * 4;
+                if(scooby.y > 330) { scooby.y = 330; scooby.dy = 0; scooby.jumps = 0; }
+            } else if (level === 11) {
+                document.getElementById('modeName').innerText = "11. TERREMOTO";
+                let tremor = Math.sin(frame * 0.15) * 25;
+                if(scooby.y > 330 + tremor) { scooby.y = 330 + tremor; scooby.dy = 0; scooby.jumps = 0; }
+            } else {
+                document.getElementById('modeName').innerText = "MODO EXPERTO";
+                if(scooby.y > 330) { scooby.y = 330; scooby.dy = 0; scooby.jumps = 0; }
             }
 
             ctx.drawImage(imgS, scooby.x, scooby.y, scooby.w, scooby.h);
 
-            // Obstáculos
-            if(frame % (level === 3 ? 60 : 110) === 0 && level !== 4) {
-                obs.push({x: 800, y: (level === 5 && gravity < 0) ? 20 : 335, w: 60, h: 60});
+            // Obstáculos (Fantasmas)
+            let spawnRate = (level === 3 || level >= 10) ? 60 : 100;
+            if(frame % spawnRate === 0 && level !== 4) {
+                let obsY = (level === 5 && gravity < 0) ? 20 : 335;
+                if(level === 11) obsY = 335 + Math.sin(frame * 0.15) * 25;
+                obs.push({x: 800, y: obsY, w: 60, h: 60});
             }
             for(let i=obs.length-1; i>=0; i--) {
                 obs[i].x -= (speed + 2);
                 ctx.drawImage(imgF, obs[i].x, obs[i].y, obs[i].w, obs[i].h);
-                if(scooby.x+20 < obs[i].x+40 && scooby.x+55 > obs[i].x+20 && scooby.y+20 < obs[i].y+40 && scooby.y+55 > obs[i].y+20) endGame();
+                if(scooby.x+15 < obs[i].x+45 && scooby.x+60 > obs[i].x+15 && scooby.y+15 < obs[i].y+45 && scooby.y+60 > obs[i].y+15) endGame();
                 if(obs[i].x < -100) obs.splice(i, 1);
             }
 
             // Galletas
-            if(frame % 90 === 0) snacks.push({x: 800, y: 100 + Math.random()*200, w: 45, h: 45});
+            if(frame % 90 === 0) snacks.push({x: 800, y: 120 + Math.random()*180, w: 45, h: 45});
             for(let i=snacks.length-1; i>=0; i--){
                 snacks[i].x -= speed;
                 ctx.drawImage(imgG, snacks[i].x, snacks[i].y, snacks[i].w, snacks[i].h);
@@ -147,8 +177,8 @@
                     snacks.splice(i,1); score++; sndE.play().catch(()=>{});
                     document.getElementById('sc').innerText = score;
                     if(score > 0 && score % 10 === 0) { 
-                        level++; speed += 1; obs = [];
-                        if(level !== 2 && level !== 4 && level !== 5 && level !== 6) gravity = 0.95;
+                        level++; speed += 0.8; obs = [];
+                        if(level > 6 && level !== 9) scooby.x = 80; // Reset posición si el viento nos movió
                     }
                 }
                 if(snacks[i] && snacks[i].x < -100) snacks.splice(i,1);
