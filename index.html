@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SCOBY: Level-Up Cookies</title>
+    <title>SCOBY: MODO GRABACIÓN</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; touch-action: none; -webkit-user-select: none; }
@@ -40,15 +40,13 @@
                     "¡Scooby-Dooby-Doo! Sigue saltando, esquiva los fantasmas y recolecta esas mini cookies — lárgate de un nivel a otro cada vez que comas 10 mini cookies. ¡Ruh-roh si te atrapa un fantasma antes!"
                 </p>
             </div>
-            <button class="btn-main" onpointerdown="startGame(event)">¡JUGAR!</button>
+            <button class="btn-main" onpointerdown="startGame(event)">¡MODO VIDEO!</button>
             <div class="high-score-label">RÉCORD: <span id="mainHi">0</span></div>
         </div>
 
         <div id="deathMenu" class="menu" style="display:none;">
             <h1 style="color:red; font-size: 25px;">¡GAME OVER!</h1>
-            <p style="font-size: 12px; margin: 20px 0 10px 0;">PUNTUACIÓN</p>
             <h2 id="finalScore" style="font-size: 40px; color:#ccff00;">0</h2>
-            <p id="newRecordMsg" style="color:#FFD700; font-size: 10px; display:none;">¡NUEVO RÉCORD!</p>
             <button class="btn-main" onpointerdown="startGame(event)">REINTENTAR</button>
         </div>
 
@@ -84,7 +82,6 @@
             scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0 };
             document.getElementById('mainMenu').style.display = 'none';
             document.getElementById('deathMenu').style.display = 'none';
-            document.getElementById('newRecordMsg').style.display = 'none';
             document.getElementById('sc').innerText = "0";
             document.getElementById('lvDisp').innerText = "1";
             bgM.currentTime = 0; bgM.play().catch(()=>{});
@@ -94,10 +91,7 @@
         function handleInput() {
             if(!active) return;
             sndJ.currentTime = 0; sndJ.play().catch(()=>{});
-            
-            // Lógica cíclica de mecánicas (1 al 25)
             let mechanic = ((level - 1) % 25) + 1;
-
             if (mechanic === 17) { scooby.dy = 12; } 
             else if (mechanic === 21) { scooby.x += 100; if(scooby.x > 500) scooby.x = 80; scooby.dy = -15; }
             else if (mechanic === 5 || mechanic === 2 || mechanic === 4) { scooby.dy = -11; }
@@ -110,19 +104,15 @@
         function animate() {
             if (!active) return;
             ctx.clearRect(0,0,800,450);
-            
             let mechanic = ((level - 1) % 25) + 1;
             document.getElementById('lvDisp').innerText = level;
 
-            // Selección de Gravedad según la mecánica del ciclo
             if (mechanic === 5 || mechanic === 2) { gravity = 0.4; }
             else if (mechanic === 7) { gravity = 2.1; } 
             else if (mechanic === 17) { gravity = -0.95; }
             else { gravity = 0.95; }
 
-            // Velocidad especial en mecánica 23
             let currentSpeed = (mechanic === 23) ? speed * 0.5 : speed;
-            
             scooby.dy += gravity;
             scooby.y += scooby.dy;
 
@@ -134,7 +124,6 @@
             ctx.drawImage(imgB, bgX, 0, 800, 450); ctx.drawImage(imgB, bgX+800, 0, 800, 450);
             ctx.drawImage(imgS, scooby.x, scooby.y, scooby.w, scooby.h);
 
-            // OBSTÁCULOS SEGÚN MECÁNICA
             if(frame % 85 === 0) {
                 if (mechanic === 5) {
                     obs.push({x: 800, y: 0, w: 100, h: 150});
@@ -150,11 +139,14 @@
             for(let i=obs.length-1; i>=0; i--) {
                 obs[i].x -= (currentSpeed + 2.5);
                 ctx.drawImage(imgF, obs[i].x, obs[i].y, obs[i].w, obs[i].h);
-                if(scooby.x+20 < obs[i].x+obs[i].w-20 && scooby.x+scooby.w-20 > obs[i].x+20 && scooby.y+20 < obs[i].y+obs[i].h-15 && scooby.y+scooby.h-15 > obs[i].y+15) endGame();
+                
+                // --- MODO DIOS ACTIVADO ---
+                // Se ha comentado la colisión para que no pierdas durante la grabación
+                /* if(scooby.x+20 < obs[i].x+obs[i].w-20 && scooby.x+scooby.w-20 > obs[i].x+20 && scooby.y+20 < obs[i].y+obs[i].h-15 && scooby.y+scooby.h-15 > obs[i].y+15) endGame(); */
+                
                 if(obs[i].x < -150) obs.splice(i, 1);
             }
 
-            // SNACKS Y SUBIDA DE NIVEL
             if(frame % 70 === 0) snacks.push({x: 800, y: 150 + Math.random()*150, w: 45, h: 45});
             for(let i=snacks.length-1; i>=0; i--){
                 snacks[i].x -= currentSpeed;
@@ -162,34 +154,19 @@
                 if(scooby.x < snacks[i].x+40 && scooby.x+scooby.w > snacks[i].x && scooby.y < snacks[i].y+40 && scooby.y+scooby.h > snacks[i].y) {
                     score++; snacks.splice(i,1); sndE.play().catch(()=>{});
                     document.getElementById('sc').innerText = score;
-                    
                     if(score % 10 === 0) { 
-                        level++; 
-                        // LÓGICA DE VELOCIDAD MEJORADA
-                        speed += 0.15; // Aumento normal por nivel
-                        
-                        // Si estamos en la segunda tanda (Nivel > 25) y cada 5 niveles
-                        if(level > 25 && level % 5 === 0) {
-                            speed += 0.40; // Turbo extra de velocidad por dificultad avanzada
-                        }
+                        level++; speed += 0.15; 
+                        if(level > 25 && level % 5 === 0) speed += 0.40;
                     }
                 }
                 if(snacks[i] && snacks[i].x < -100) snacks.splice(i,1);
             }
-
             frame++;
             if(active) requestAnimationFrame(animate);
         }
 
         function endGame() {
             active = false; bgM.pause();
-            if (score > highScore) {
-                highScore = score;
-                localStorage.setItem('scobyHighScore', highScore);
-                document.getElementById('hi').innerText = highScore;
-                document.getElementById('mainHi').innerText = highScore;
-                document.getElementById('newRecordMsg').style.display = 'block';
-            }
             document.getElementById('finalScore').innerText = score;
             document.getElementById('deathMenu').style.display = 'flex';
         }
