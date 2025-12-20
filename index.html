@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SCOBY: 25 DEFINITIVE GAMES - RECORDING MODE</title>
+    <title>SCOBY: 25 FINAL GAMES - DARK MODE 19</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; touch-action: none; -webkit-user-select: none; }
@@ -25,9 +25,9 @@
         </div>
 
         <div id="mainMenu" class="menu">
-            <h1 style="color:#ccff00; font-size:30px;">MASTER VIDEO</h1>
-            <p style="font-size:10px; margin-bottom:20px;">25 JUEGOS DEFINITIVOS ACTIVADOS</p>
-            <button class="btn-main" onpointerdown="startGame(event)">¡GRABAR AHORA!</button>
+            <h1 style="color:#ccff00; font-size:30px;">RECORDING FINAL</h1>
+            <p style="font-size:10px; margin-bottom:20px;">MODO LINTERNA EN NIVEL 19</p>
+            <button class="btn-main" onpointerdown="startGame(event)">¡GRABAR!</button>
         </div>
 
         <canvas id="c"></canvas>
@@ -49,29 +49,29 @@
         bgM.loop = true;
 
         let score = 0, level = 1, speed = 7.0, active = false, frame = 0, gravity = 0.95;
-        let scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0, opacity: 1, filter: "none" };
+        let scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0, opacity: 1 };
         let obs = [], snacks = [], bgX = 0;
 
         const gameMap = {
             1: { n: "PIXEL RUN", g: 0.95, j: -17, type: "normal" },
             2: { n: "SUBMARINO", g: 0.35, j: -10, type: "flota" },
             3: { n: "TECHO INVERTIDO", g: -0.95, j: 12, type: "techo" },
-            4: { n: "ESCUDO GALLETA", g: 0.95, j: -17, type: "gigante_scoby" }, // NUEVO
+            4: { n: "ESCUDO GALLETA", g: 0.95, j: -17, type: "gigante_scoby" },
             5: { n: "EL TÚNEL", g: 0.40, j: -11, type: "tunel" },
             6: { n: "CARGA PESADA", g: 2.5, j: -26, type: "pesado" },
             7: { n: "MOON WALK", g: 0.95, j: -17, type: "lento" },
-            8: { n: "GRAVEDAD LUNAR", g: 0.25, j: -12, type: "flota" }, // NUEVO
+            8: { n: "GRAVEDAD LUNAR", g: 0.25, j: -12, type: "flota" },
             9: { n: "DOBLE AMENAZA", g: 0.95, j: -17, type: "doble" },
             10: { n: "GRAVEDAD ZERO", g: 0.15, j: -6, type: "flota" },
             11: { n: "TRAMPOLÍN", g: 0.95, j: -17, type: "bounce" },
             12: { n: "FANTASMAS GIGANTES", g: 1.1, j: -19, type: "gigante_obs" },
-            13: { n: "MODO FANTASMA", g: 0.95, j: -17, type: "psicodelico" }, // NUEVO
-            14: { n: "SUELO DE FUEGO", g: 0.95, j: -17, type: "bounce_forced" }, // NUEVO
+            13: { n: "MODO FANTASMA", g: 0.95, j: -17, type: "psicodelico" },
+            14: { n: "SUELO DE FUEGO", g: 0.95, j: -17, type: "bounce_forced" },
             15: { n: "TÚNEL DE SOMBRAS", g: 0.45, j: -11, type: "tunel_transp" },
             16: { n: "ANCLA", g: 1.5, j: -18, type: "pesado" },
             17: { n: "FLASH RUN", g: 1.0, j: -18, type: "turbo" },
-            18: { n: "CÁMARA INESTABLE", g: 0.95, j: -17, type: "vibracion" }, // NUEVO
-            19: { n: "PARACAÍDAS", g: 0.3, j: -17, type: "planea" },
+            18: { n: "CÁMARA INESTABLE", g: 0.95, j: -17, type: "vibracion" },
+            19: { n: "LA CUEVA", g: 0.95, j: -17, type: "linterna" }, // NIVEL 19 CAMBIADO
             20: { n: "TÚNEL MÓVIL", g: 0.40, j: -11, type: "tunel" },
             21: { n: "VIENTO EN CONTRA", g: 0.95, j: -17, type: "viento" },
             22: { n: "INVISIBILIDAD", g: 0.95, j: -17, type: "invisible" },
@@ -83,7 +83,7 @@
         function startGame(e) {
             if(e) e.stopPropagation();
             active = true; score = 0; level = 1; speed = 7.0; obs = []; snacks = []; frame = 0;
-            scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0, opacity: 1, filter: "none" };
+            scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0, opacity: 1 };
             document.getElementById('mainMenu').style.display = 'none';
             bgM.play().catch(()=>{});
             requestAnimationFrame(animate);
@@ -94,106 +94,4 @@
             sndJ.currentTime = 0; sndJ.play().catch(()=>{});
             let m = ((level - 1) % 25) + 1;
             let cfg = gameMap[m];
-
-            if (cfg.type === "infinito") { scooby.dy = cfg.j; }
-            else if (cfg.type === "techo") { scooby.dy = cfg.j; }
-            else if (["flota", "tunel", "pesado", "tunel_transp", "gigante_scoby"].includes(cfg.type)) { scooby.dy = cfg.j; }
-            else { if(scooby.jumps < 2) { scooby.dy = cfg.j; scooby.jumps++; } }
-        }
-
-        window.onpointerdown = (e) => { if(active) { e.preventDefault(); handleInput(); } };
-
-        function animate() {
-            if (!active) return;
-            let m = ((level - 1) % 25) + 1;
-            let cfg = gameMap[m];
-            ctx.save();
-
-            // Mecánica Nivel 18: Vibración
-            if(cfg.type === "vibracion") {
-                ctx.translate(Math.random()*4-2, Math.random()*4-2);
-                scooby.x = 80 + Math.sin(frame/10)*30;
-            }
-
-            ctx.clearRect(0,0,800,450);
-            document.getElementById('lvDisp').innerText = level;
-            document.getElementById('modeName').innerText = cfg.n;
-
-            gravity = cfg.g;
-            let sActual = (cfg.type === "lento") ? speed * 0.5 : (cfg.type === "turbo" ? speed * 1.5 : speed);
-
-            // Mecánicas Especiales
-            scooby.w = (cfg.type === "gigante_scoby") ? 130 : 75;
-            scooby.h = (cfg.type === "gigante_scoby") ? 130 : 75;
-            scooby.opacity = (cfg.type === "invisible") ? (frame % 60 < 30 ? 0.2 : 1) : 1;
-            if(cfg.type === "psicodelico") ctx.filter = `hue-rotate(${frame*5}deg)`;
-            if(cfg.type === "hielo") scooby.x += Math.sin(frame/15)*3;
-            if(cfg.type === "viento") { if(scooby.x > 30) scooby.x -= 0.6; }
-
-            scooby.dy += gravity;
-            scooby.y += scooby.dy;
-
-            let gl = 450 - scooby.h - 40;
-            if(cfg.type !== "techo") {
-                if(scooby.y > gl) { 
-                    scooby.y = gl; scooby.dy = 0; scooby.jumps = 0; 
-                    if(cfg.type === "bounce" || cfg.type === "bounce_forced") scooby.dy = -18;
-                }
-            }
-            if(cfg.type === "techo" && scooby.y < 20) { scooby.y = 20; scooby.dy = 0; scooby.jumps = 0; }
-
-            bgX -= (sActual/2); if(bgX <= -800) bgX = 0;
-            ctx.drawImage(imgB, bgX, 0, 800, 450); ctx.drawImage(imgB, bgX+800, 0, 800, 450);
-            
-            ctx.globalAlpha = scooby.opacity;
-            ctx.drawImage(imgS, scooby.x, scooby.y, scooby.w, scooby.h);
-            ctx.globalAlpha = 1;
-
-            if(frame % 85 === 0) {
-                let isTunel = cfg.type.includes("tunel");
-                let oH = (cfg.type === "gigante_obs") ? 140 : (cfg.type === "gigante_scoby" ? 35 : 60);
-                let oW = (cfg.type === "gigante_obs") ? 80 : 60;
-
-                if (isTunel) {
-                    if(cfg.type === "tunel_transp") ctx.globalAlpha = 0.3;
-                    obs.push({x: 800, y: 0, w: 100, h: 160, t: cfg.type});
-                    obs.push({x: 800, y: 300, w: 100, h: 160, t: cfg.type});
-                } else if (cfg.type === "doble") {
-                    obs.push({x: 800, y: 335, w: 60, h: 60});
-                    obs.push({x: 1050, y: 335, w: 60, h: 60});
-                } else {
-                    let yF = (cfg.type === "techo") ? 20 : (cfg.type === "pesado" ? 370 : 410 - oH);
-                    obs.push({x: 800, y: yF, w: oW, h: oH});
-                }
-                ctx.globalAlpha = 1;
-            }
-
-            for(let i=obs.length-1; i>=0; i--) {
-                obs[i].x -= (sActual + 2.5);
-                if(obs[i].t === "tunel_transp") ctx.globalAlpha = 0.3;
-                ctx.drawImage(imgF, obs[i].x, obs[i].y, obs[i].w, obs[i].h);
-                ctx.globalAlpha = 1;
-                if(obs[i].x < -200) obs.splice(i, 1);
-            }
-
-            if(frame % 70 === 0) snacks.push({x: 800, y: 120 + Math.random()*200, w: 45, h: 45});
-            for(let i=snacks.length-1; i>=0; i--){
-                snacks[i].x -= sActual;
-                ctx.drawImage(imgG, snacks[i].x, snacks[i].y, snacks[i].w, snacks[i].h);
-                if(scooby.x < snacks[i].x+40 && scooby.x+scooby.w > snacks[i].x && scooby.y < snacks[i].y+40 && scooby.y+scooby.h > snacks[i].y) {
-                    score++; snacks.splice(i,1); sndE.play().catch(()=>{});
-                    document.getElementById('sc').innerText = score;
-                    if(score % 10 === 0) { 
-                        level++; speed += 0.25; 
-                        if(level > 25) speed += 0.50;
-                    }
-                }
-                if(snacks[i] && snacks[i].x < -100) snacks.splice(i,1);
-            }
-            ctx.restore();
-            frame++;
-            if(active) requestAnimationFrame(animate);
-        }
-    </script>
-</body>
-</html>
+            if (cfg.
