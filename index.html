@@ -3,36 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scooby: Torneo Infinito Profesional</title>
+    <title>SCOBY: Level-Up Cookies</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; touch-action: none; -webkit-user-select: none; }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
         canvas { background: #111; max-width: 100%; max-height: 100%; border: 3px solid #ccff00; }
-        #ui { position: absolute; top: 10px; width: 92%; display: flex; justify-content: space-between; color: #ccff00; font-family: sans-serif; font-weight: bold; z-index: 100; pointer-events: none; text-shadow: 2px 2px #000; }
-        .menu { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; color: white; font-family: sans-serif; text-align: center; }
-        .btn-main { padding: 18px 50px; font-size: 22px; background: #ccff00; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; color: black; box-shadow: 0 6px 0 #88aa00; }
+        
+        /* FUENTE PIXEL PARA TODO */
+        * { font-family: 'Press Start 2P', cursive; }
+
+        /* TÍTULOS CON DOBLE COLOR */
+        .title-scoby {
+            font-size: 45px;
+            margin: 0;
+            line-height: 1.2;
+            background: linear-gradient(to bottom, #00BFFF 50%, #FFD700 50%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(4px 4px 0px #000);
+        }
+
+        .title-level {
+            font-size: 18px;
+            margin: 10px 0 25px 0;
+            background: linear-gradient(to bottom, #FFFFFF 50%, #32CD32 50%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(2px 2px 0px #000);
+        }
+
+        /* CONTENEDOR DE LA FRASE CON SCOOBY */
+        .phrase-container {
+            position: relative;
+            max-width: 85%;
+            margin-bottom: 30px;
+        }
+
+        /* Imagen de Scooby apoyado (usando tu imagen principal) */
+        .scooby-mini {
+            position: absolute;
+            top: -45px;
+            right: -10px;
+            width: 60px;
+            transform: rotate(10deg);
+        }
+
+        .instrucciones {
+            color: #fff;
+            font-size: 10px;
+            line-height: 1.8;
+            text-shadow: 2px 2px #000;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #555;
+        }
+
+        #ui { position: absolute; top: 10px; width: 92%; display: flex; justify-content: space-between; color: #ccff00; font-size: 10px; z-index: 100; pointer-events: none; text-shadow: 2px 2px #000; }
+        .menu { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; color: white; text-align: center; padding: 20px; box-sizing: border-box; }
+        .btn-main { padding: 15px 30px; font-size: 16px; background: #ccff00; border: none; border-radius: 5px; cursor: pointer; color: black; box-shadow: 0 6px 0 #88aa00; margin-top: 10px; }
         .btn-main:active { transform: translateY(4px); box-shadow: none; }
+        
+        .high-score-label { color: #FFD700; margin-top: 15px; font-size: 12px; }
     </style>
 </head>
 <body>
 
     <div id="game-container">
         <div id="ui">
-            <div>MODO: <span id="modeName">ESPERANDO</span></div>
+            <div>MODO: <span id="modeName">...</span></div>
             <div>🍪: <span id="sc">0</span></div>
-            <div>NIVEL: <span id="lvDisplay">1</span></div>
+            <div>TOP: <span id="hi">0</span></div>
         </div>
 
         <div id="mainMenu" class="menu">
-            <h1 style="color:#ccff00; font-size: 35px;">SCOOBY: TORNEO INFINITO</h1>
-            <p>Nivel 7 ajustado: ¡Cuidado con el peso!</p>
+            <h1 class="title-scoby">SCOBY</h1>
+            <h2 class="title-level">LEVEL-UP COOKIES</h2>
+            
+            <div class="phrase-container">
+                <img src="4d0e8e93e8663b020f6063451e53118a.png" class="scooby-mini">
+                <p class="instrucciones">
+                    "¡Scooby-Dooby-Doo! Sigue saltando, esquiva los fantasmas y recolecta esas mini cookies — lárgate de un nivel a otro cada vez que comas 10 mini cookies. ¡Ruh-roh si te atrapa un fantasma antes!"
+                </p>
+            </div>
+
             <button class="btn-main" onpointerdown="startGame(event)">¡JUGAR!</button>
+            <div class="high-score-label">RÉCORD: <span id="mainHi">0</span></div>
         </div>
 
         <div id="deathMenu" class="menu" style="display:none;">
-            <h1 style="color:red; font-size: 40px;">¡GAME OVER!</h1>
-            <h2 id="finalScore" style="font-size: 60px;">0</h2>
-            <p id="finalLevel" style="color:#ccff00; font-weight: bold;"></p>
+            <h1 style="color:red; font-size: 25px;">¡GAME OVER!</h1>
+            <p style="font-size: 12px; margin: 20px 0 10px 0;">PUNTUACIÓN</p>
+            <h2 id="finalScore" style="font-size: 40px; color:#ccff00;">0</h2>
+            <p id="newRecordMsg" style="color:#FFD700; font-size: 10px; display:none;">¡NUEVO RÉCORD!</p>
             <button class="btn-main" onpointerdown="startGame(event)">REINTENTAR</button>
         </div>
 
@@ -58,12 +122,19 @@
         let scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0 };
         let obs = [], snacks = [], bgX = 0;
 
+        // --- SISTEMA DE HIGH SCORE (LOCALSTORAGE) ---
+        let highScore = localStorage.getItem('scobyHighScore') || 0;
+        document.getElementById('hi').innerText = highScore;
+        document.getElementById('mainHi').innerText = highScore;
+
         function startGame(e) {
             if(e) e.stopPropagation();
             active = true; score = 0; level = 1; speed = 7; obs = []; snacks = []; frame = 0;
             scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0 }; gravity = 0.95;
             document.getElementById('mainMenu').style.display = 'none';
             document.getElementById('deathMenu').style.display = 'none';
+            document.getElementById('newRecordMsg').style.display = 'none';
+            document.getElementById('sc').innerText = "0";
             bgM.currentTime = 0; bgM.play().catch(()=>{});
             requestAnimationFrame(animate);
         }
@@ -72,13 +143,10 @@
             if(!active) return;
             sndJ.currentTime = 0; sndJ.play().catch(()=>{});
             let mechanic = ((level - 1) % 25) + 1;
-
             if (mechanic === 17) { scooby.dy = 12; } 
             else if (mechanic === 21) { scooby.x += 100; if(scooby.x > 500) scooby.x = 80; scooby.dy = -15; }
             else if (mechanic === 2 || mechanic === 4) { scooby.dy = -10; }
-            else { 
-                if(scooby.jumps < 2) { scooby.dy = -17; scooby.jumps++; }
-            }
+            else { if(scooby.jumps < 2) { scooby.dy = -17; scooby.jumps++; } }
         }
 
         window.onpointerdown = (e) => { if(active && e.target.tagName !== 'BUTTON') { e.preventDefault(); handleInput(); } };
@@ -87,22 +155,11 @@
             if (!active) return;
             ctx.clearRect(0,0,800,450);
             let mechanic = ((level - 1) % 25) + 1;
-            document.getElementById('lvDisplay').innerText = level;
 
-            // --- MECÁNICAS ---
             if (mechanic === 2) { document.getElementById('modeName').innerText = "SUBMARINO"; gravity = 0.3; }
-            else if (mechanic === 3) { document.getElementById('modeName').innerText = "VAGONETA"; gravity = 1.3; }
-            else if (mechanic === 4) { document.getElementById('modeName').innerText = "AVIONETA"; gravity = 0.6; }
-            else if (mechanic === 7) { document.getElementById('modeName').innerText = "PESADO"; gravity = 2.4; } // Gravedad alta
-            else if (mechanic === 8) { document.getElementById('modeName').innerText = "LUNAR"; gravity = 0.15; }
-            else if (mechanic === 9) { document.getElementById('modeName').innerText = "VIENTO"; gravity = 0.95; scooby.x -= 0.6; if(scooby.x < -30) endGame(); }
-            else if (mechanic === 13) { document.getElementById('modeName').innerText = "MINI"; scooby.w = 40; scooby.h = 40; }
-            else if (mechanic === 14) { document.getElementById('modeName').innerText = "GIGANTE"; scooby.w = 140; scooby.h = 140; }
+            else if (mechanic === 7) { document.getElementById('modeName').innerText = "PESADO"; gravity = 2.4; }
             else if (mechanic === 17) { document.getElementById('modeName').innerText = "TECHO"; gravity = -0.95; }
-            else if (mechanic === 22) { document.getElementById('modeName').innerText = "REBOTE"; gravity = 1.2; }
-            else if (mechanic === 23) { document.getElementById('modeName').innerText = "MATRIX"; } 
-            else if (mechanic === 24) { document.getElementById('modeName').innerText = "OSCURIDAD"; }
-            else { document.getElementById('modeName').innerText = "TORNEO"; gravity = 0.95; scooby.w = 75; scooby.h = 75; if(mechanic !== 9) scooby.x = 80; }
+            else { document.getElementById('modeName').innerText = "PIXEL RUN"; gravity = 0.95; }
 
             let currentSpeed = (mechanic === 23) ? speed * 0.5 : speed;
             scooby.dy += gravity;
@@ -114,27 +171,13 @@
 
             bgX -= (currentSpeed/2); if(bgX <= -800) bgX = 0;
             ctx.drawImage(imgB, bgX, 0, 800, 450); ctx.drawImage(imgB, bgX+800, 0, 800, 450);
-            
-            if(mechanic === 15) ctx.globalAlpha = Math.sin(frame * 0.1) > 0 ? 1 : 0.3;
             ctx.drawImage(imgS, scooby.x, scooby.y, scooby.w, scooby.h);
-            ctx.globalAlpha = 1;
 
-            if(mechanic === 24) {
-                ctx.fillStyle = "black"; ctx.beginPath(); ctx.rect(0,0,800,450);
-                ctx.arc(scooby.x+scooby.w/2, scooby.y+scooby.h/2, 120, 0, Math.PI*2, true); ctx.fill();
-            }
-
-            // --- OBSTÁCULOS AJUSTADOS (JUSTICIA NIVEL 7) ---
-            if(frame % 85 === 0 && mechanic !== 4) {
-                let yF = (mechanic === 17) ? 20 : 335;
-                let hF = 60, wF = 60;
-                
-                // Si es pesado, el fantasma es más bajo para poder saltarlo
-                if(mechanic === 7) { hF = 32; wF = 75; yF = 373; } 
+            if(frame % 85 === 0) {
+                let hF = (mechanic === 7) ? 32 : 60;
+                let wF = (mechanic === 7) ? 75 : 60;
+                let yF = (mechanic === 17) ? 20 : (mechanic === 7 ? 373 : 335);
                 obs.push({x: 800, y: yF, w: wF, h: hF});
-            }
-            if(mechanic === 4 && frame % 70 === 0) {
-                obs.push({x: 800, y: 0, w: 60, h: 140}, {x: 800, y: 310, w: 60, h: 140});
             }
 
             for(let i=obs.length-1; i>=0; i--) {
@@ -144,7 +187,6 @@
                 if(obs[i].x < -100) obs.splice(i, 1);
             }
 
-            // Galletas
             if(frame % 70 === 0) snacks.push({x: 800, y: 100 + Math.random()*230, w: 45, h: 45});
             for(let i=snacks.length-1; i>=0; i--){
                 snacks[i].x -= currentSpeed;
@@ -152,10 +194,7 @@
                 if(scooby.x < snacks[i].x+40 && scooby.x+scooby.w > snacks[i].x && scooby.y < snacks[i].y+40 && scooby.y+scooby.h > snacks[i].y) {
                     score++; snacks.splice(i,1); sndE.play().catch(()=>{});
                     document.getElementById('sc').innerText = score;
-                    if(score % 10 === 0) { 
-                        level++; 
-                        if(level % 5 === 0) speed += 1.3; else speed += 0.3;
-                    }
+                    if(score % 10 === 0) level++;
                 }
                 if(snacks[i] && snacks[i].x < -100) snacks.splice(i,1);
             }
@@ -166,8 +205,17 @@
 
         function endGame() {
             active = false; bgM.pause();
+            
+            // Lógica de Récord Máximo
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('scobyHighScore', highScore);
+                document.getElementById('hi').innerText = highScore;
+                document.getElementById('mainHi').innerText = highScore;
+                document.getElementById('newRecordMsg').style.display = 'block';
+            }
+
             document.getElementById('finalScore').innerText = score;
-            document.getElementById('finalLevel').innerText = "Llegaste al Nivel: " + level;
             document.getElementById('deathMenu').style.display = 'flex';
         }
     </script>
