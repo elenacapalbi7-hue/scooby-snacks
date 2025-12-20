@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SCOBY: 25 LEVELS - SUPER LIGHT 19</title>
+    <title>SCOBY: 25 LEVELS - MEGA LIGHT FIX</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; touch-action: none; }
@@ -25,9 +25,9 @@
         </div>
 
         <div id="mainMenu" class="menu">
-            <h1 style="color:#ccff00; font-size:25px;">RECORDING MODE</h1>
-            <p style="font-size:10px; margin-bottom:20px;">NIVEL 19: LUZ MAXIMA</p>
-            <button class="btn-main" onclick="startGame()">INICIAR GRABACIÓN</button>
+            <h1 style="color:#ccff00; font-size:25px;">GITHUB READY</h1>
+            <p style="font-size:10px; margin-bottom:20px;">NIVEL 19: MEGA LINTERNA</p>
+            <button class="btn-main" onclick="startGame()">¡GRABAR AHORA!</button>
         </div>
 
         <canvas id="c"></canvas>
@@ -115,36 +115,4 @@
             document.getElementById('sc').innerText = score;
             document.getElementById('modeName').innerText = cfg.n;
 
-            let sActual = (cfg.type === "lento") ? speed * 0.5 : (cfg.type === "turbo" ? speed * 1.5 : speed);
-            scooby.w = (cfg.type === "gigante_scoby") ? 130 : 75;
-            scooby.h = (cfg.type === "gigante_scoby") ? 130 : 75;
-            
-            scooby.dy += cfg.g;
-            scooby.y += scooby.dy;
-
-            let gl = 450 - scooby.h - 40;
-            if(cfg.type !== "techo") {
-                if(scooby.y > gl) { scooby.y = gl; scooby.dy = 0; scooby.jumps = 0; if(cfg.type === "bounce" || cfg.type === "bounce_forced") scooby.dy = -18; }
-            } else if(scooby.y < 20) { scooby.y = 20; scooby.dy = 0; }
-
-            bgX -= (sActual/2); if(bgX <= -800) bgX = 0;
-            ctx.drawImage(imgB, bgX, 0, 800, 450); ctx.drawImage(imgB, bgX+800, 0, 800, 450);
-
-            if(cfg.type === "psicodelico") ctx.filter = `hue-rotate(${frame*5}deg)`;
-            ctx.globalAlpha = (cfg.type === "invisible") ? (frame % 60 < 30 ? 0.2 : 1) : 1;
-            ctx.drawImage(imgS, scooby.x, scooby.y, scooby.w, scooby.h);
-            ctx.globalAlpha = 1; ctx.filter = "none";
-
-            if(frame % 85 === 0) {
-                let oH = (cfg.type === "gigante_obs") ? 140 : (cfg.type === "gigante_scoby" ? 35 : 60);
-                if (cfg.type.includes("tunel")) {
-                    obs.push({x: 800, y: 0, w: 100, h: 160, t: cfg.type});
-                    obs.push({x: 800, y: 300, w: 100, h: 160, t: cfg.type});
-                } else {
-                    obs.push({x: 800, y: cfg.type === "techo" ? 20 : 410-oH, w: 60, h: oH});
-                }
-            }
-
-            for(let i=obs.length-1; i>=0; i--) {
-                obs[i].x -= (sActual + 2.5);
-                if(obs[i].t === "
+            let sActual = (cfg.type === "lento") ? speed * 0.5 : (
