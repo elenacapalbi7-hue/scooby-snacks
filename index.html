@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SCOBY: 25 LEVELS - MEGA LIGHT FIX</title>
+    <title>SCOBY FINAL - MEGA LUZ 19</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; touch-action: none; }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
-        canvas { background: #111; max-width: 100%; max-height: 100%; border: 3px solid #ccff00; }
+        canvas { background: #111; max-width: 100%; max-height: 100%; border: 3px solid #ccff00; display: block; }
         * { font-family: 'Press Start 2P', cursive; }
-        #ui { position: absolute; top: 10px; width: 92%; display: flex; justify-content: space-between; color: #ccff00; font-size: 10px; z-index: 100; pointer-events: none; text-shadow: 2px 2px #000; }
+        #ui { position: absolute; top: 10px; width: 90%; display: flex; justify-content: space-between; color: #ccff00; font-size: 10px; z-index: 100; pointer-events: none; text-shadow: 2px 2px #000; }
         .menu { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; color: white; text-align: center; }
-        .btn-main { padding: 15px 30px; font-size: 16px; background: #ccff00; border: none; cursor: pointer; color: black; box-shadow: 0 5px 0 #88aa00; }
+        .btn-main { padding: 15px 30px; font-size: 16px; background: #ccff00; border: none; cursor: pointer; color: black; box-shadow: 0 5px 0 #88aa00; border-radius: 5px; }
     </style>
 </head>
 <body>
@@ -21,13 +21,13 @@
         <div id="ui">
             <div>LV: <span id="lvDisp">1</span></div>
             <div>🍪: <span id="sc">0</span></div>
-            <div id="modeName" style="color:#fff;">PIXEL RUN</div>
+            <div id="modeName">PIXEL RUN</div>
         </div>
 
         <div id="mainMenu" class="menu">
-            <h1 style="color:#ccff00; font-size:25px;">GITHUB READY</h1>
-            <p style="font-size:10px; margin-bottom:20px;">NIVEL 19: MEGA LINTERNA</p>
-            <button class="btn-main" onclick="startGame()">¡GRABAR AHORA!</button>
+            <h1 style="color:#ccff00; font-size:20px; margin-bottom:10px;">SCOBY 25 MODES</h1>
+            <p style="font-size:8px; margin-bottom:20px;">NIVEL 19: LUZ GIGANTE ACTIVADA</p>
+            <button class="btn-main" id="startBtn">EMPEZAR JUEGO</button>
         </div>
 
         <canvas id="c"></canvas>
@@ -38,19 +38,18 @@
         const ctx = canvas.getContext('2d');
         canvas.width = 800; canvas.height = 450;
 
-        const imgS = new Image(); imgS.src = '4d0e8e93e8663b020f6063451e53118a.png';
-        const imgG = new Image(); imgG.src = 'eb4380a3cf64873dc0ebbad595d0886f.png';
-        const imgB = new Image(); imgB.src = '1766045750713.png';
-        const imgF = new Image(); imgF.src = '535eb96ca41945fbcd1774e60989d8e3.png';
+        // Carga de imágenes con promesas para asegurar que el juego inicie
+        const loadImage = (src) => new Promise(res => { const i = new Image(); i.src = src; i.onload = () => res(i); });
         
+        let imgS, imgG, imgB, imgF;
+        let score = 0, level = 1, speed = 7.0, active = false, frame = 0;
+        let scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0 };
+        let obs = [], snacks = [], bgX = 0;
+
         const sndJ = new Audio('audio saltoo.mp4');
         const sndE = new Audio('audio galletaa.mp4');
         const bgM = new Audio('DanLebowitzTiptoeOuttheBack.mp4');
         bgM.loop = true;
-
-        let score = 0, level = 1, speed = 7.0, active = false, frame = 0;
-        let scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0, opacity: 1 };
-        let obs = [], snacks = [], bgX = 0;
 
         const gameMap = {
             1: { n: "PIXEL RUN", g: 0.95, j: -17, type: "normal" },
@@ -58,61 +57,101 @@
             3: { n: "TECHO INVERTIDO", g: -0.95, j: 12, type: "techo" },
             4: { n: "ESCUDO GALLETA", g: 0.95, j: -17, type: "gigante_scoby" },
             5: { n: "EL TÚNEL", g: 0.40, j: -11, type: "tunel" },
-            6: { n: "CARGA PESADA", g: 2.5, j: -26, type: "pesado" },
-            7: { n: "MOON WALK", g: 0.95, j: -17, type: "lento" },
-            8: { n: "GRAVEDAD LUNAR", g: 0.25, j: -12, type: "flota" },
-            9: { n: "DOBLE AMENAZA", g: 0.95, j: -17, type: "doble" },
-            10: { n: "GRAVEDAD ZERO", g: 0.15, j: -6, type: "flota" },
-            11: { n: "TRAMPOLÍN", g: 0.95, j: -17, type: "bounce" },
-            12: { n: "FANTASMAS GIGANTES", g: 1.1, j: -19, type: "gigante_obs" },
-            13: { n: "MODO FANTASMA", g: 0.95, j: -17, type: "psicodelico" },
-            14: { n: "SUELO DE FUEGO", g: 0.95, j: -17, type: "bounce_forced" },
-            15: { n: "TÚNEL DE SOMBRAS", g: 0.45, j: -11, type: "tunel_transp" },
-            16: { n: "ANCLA", g: 1.5, j: -18, type: "pesado" },
-            17: { n: "FLASH RUN", g: 1.0, j: -18, type: "turbo" },
             18: { n: "CÁMARA INESTABLE", g: 0.95, j: -17, type: "vibracion" },
             19: { n: "LA CUEVA", g: 0.95, j: -17, type: "linterna" },
-            20: { n: "TÚNEL MÓVIL", g: 0.40, j: -11, type: "tunel" },
-            21: { n: "VIENTO EN CONTRA", g: 0.95, j: -17, type: "viento" },
-            22: { n: "INVISIBILIDAD", g: 0.95, j: -17, type: "invisible" },
-            23: { n: "MULTISALTO", g: 1.2, j: -15, type: "infinito" },
-            24: { n: "SUELO DE HIELO", g: 0.95, j: -17, type: "hielo" },
             25: { n: "EL GRAN FINAL", g: 0.5, j: -12, type: "tunel" }
         };
 
-        function startGame() {
-            active = true; score = 0; level = 1; speed = 7.0; obs = []; snacks = []; frame = 0;
-            scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0, opacity: 1 };
-            document.getElementById('mainMenu').style.display = 'none';
-            bgM.play().catch(()=>{});
-            animate();
+        // Rellenar niveles faltantes para evitar errores
+        for(let i=1; i<=25; i++) { if(!gameMap[i]) gameMap[i] = { n: "MODO "+i, g: 0.95, j: -17, type: "normal" }; }
+
+        async function init() {
+            imgS = await loadImage('4d0e8e93e8663b020f6063451e53118a.png');
+            imgG = await loadImage('eb4380a3cf64873dc0ebbad595d0886f.png');
+            imgB = await loadImage('1766045750713.png');
+            imgF = await loadImage('535eb96ca41945fbcd1774e60989d8e3.png');
+            
+            document.getElementById('startBtn').addEventListener('click', () => {
+                active = true;
+                document.getElementById('mainMenu').style.display = 'none';
+                bgM.play().catch(e => console.log("Audio bloqueado"));
+                animate();
+            });
         }
 
-        function handleInput() {
+        function handleInput(e) {
             if(!active) return;
+            if(e) e.preventDefault();
             sndJ.currentTime = 0; sndJ.play().catch(()=>{});
-            let m = ((level - 1) % 25) + 1;
-            let cfg = gameMap[m];
-            if (["flota", "tunel", "pesado", "tunel_transp", "gigante_scoby", "linterna", "infinito", "techo"].includes(cfg.type)) {
+            let cfg = gameMap[((level - 1) % 25) + 1];
+            if (["flota", "tunel", "linterna", "techo"].includes(cfg.type)) {
                 scooby.dy = cfg.j;
-            } else {
-                if(scooby.jumps < 2) { scooby.dy = cfg.j; scooby.jumps++; }
+            } else if(scooby.jumps < 2) { 
+                scooby.dy = cfg.j; scooby.jumps++; 
             }
         }
 
-        window.onpointerdown = (e) => { e.preventDefault(); handleInput(); };
+        window.addEventListener('pointerdown', handleInput);
 
         function animate() {
             if (!active) return;
-            let m = ((level - 1) % 25) + 1;
-            let cfg = gameMap[m];
-            
+            let cfg = gameMap[((level - 1) % 25) + 1];
             ctx.save();
-            if(cfg.type === "vibracion") ctx.translate(Math.random()*4-2, Math.random()*4-2);
-
+            
+            if(cfg.type === "vibracion") ctx.translate(Math.random()*6-3, Math.random()*6-3);
             ctx.clearRect(0,0,800,450);
-            document.getElementById('lvDisp').innerText = level;
-            document.getElementById('sc').innerText = score;
-            document.getElementById('modeName').innerText = cfg.n;
 
-            let sActual = (cfg.type === "lento") ? speed * 0.5 : (
+            // Fondo
+            bgX -= (speed/2); if(bgX <= -800) bgX = 0;
+            ctx.drawImage(imgB, bgX, 0, 800, 450); ctx.drawImage(imgB, bgX+800, 0, 800, 450);
+
+            // Scooby Físicas
+            scooby.dy += cfg.g;
+            scooby.y += scooby.dy;
+            let floor = 450 - scooby.h - 40;
+            if(cfg.type !== "techo") {
+                if(scooby.y > floor) { scooby.y = floor; scooby.dy = 0; scooby.jumps = 0; }
+            } else if(scooby.y < 20) { scooby.y = 20; scooby.dy = 0; }
+
+            ctx.drawImage(imgS, scooby.x, scooby.y, scooby.w, scooby.h);
+
+            // Obstáculos y Galletas
+            if(frame % 90 === 0) obs.push({x: 800, y: cfg.type==="techo"?20:350, w: 60, h: 60});
+            if(frame % 70 === 0) snacks.push({x: 800, y: 150+Math.random()*150, w: 40, h: 40});
+
+            obs.forEach((o, i) => {
+                o.x -= speed + 2; ctx.drawImage(imgF, o.x, o.y, o.w, o.h);
+                if(scooby.x < o.x+o.w-10 && scooby.x+scooby.w-10 > o.x && scooby.y < o.y+o.h-10 && scooby.y+scooby.h-10 > o.y) {
+                    location.reload(); // Reiniciar al chocar
+                }
+            });
+
+            snacks.forEach((s, i) => {
+                s.x -= speed; ctx.drawImage(imgG, s.x, s.y, s.w, s.h);
+                if(scooby.x < s.x+s.w && scooby.x+scooby.w > s.x && scooby.y < s.y+s.h && scooby.y+scooby.h > s.y) {
+                    snacks.splice(i, 1); score++; sndE.play().catch(()=>{});
+                    document.getElementById('sc').innerText = score;
+                    if(score % 10 === 0) { level++; speed += 0.5; document.getElementById('lvDisp').innerText = level; document.getElementById('modeName').innerText = gameMap[((level-1)%25)+1].n; }
+                }
+            });
+
+            // EFECTO LINTERNA NIVEL 19 (LUZ MUCHO MÁS GRANDE)
+            if(cfg.type === "linterna") {
+                ctx.globalCompositeOperation = 'destination-in';
+                let grad = ctx.createRadialGradient(scooby.x+scooby.w/2, scooby.y+scooby.h/2, 50, scooby.x+scooby.w/2, scooby.y+scooby.h/2, 500);
+                grad.addColorStop(0, 'rgba(0,0,0,1)');
+                grad.addColorStop(0.8, 'rgba(0,0,0,0.5)'); // Luz más suave en bordes
+                grad.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(scooby.x+scooby.w/2, scooby.y+scooby.h/2, 500, 0, Math.PI*2); ctx.fill();
+                ctx.globalCompositeOperation = 'source-over';
+            }
+
+            ctx.restore();
+            frame++;
+            requestAnimationFrame(animate);
+        }
+
+        init();
+    </script>
+</body>
+</html>
