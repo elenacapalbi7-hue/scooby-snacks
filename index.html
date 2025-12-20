@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SCOBY: 25 UNIQUE LEVELS - GITHUB EDITION</title>
+    <title>SCOBY: 25 LEVELS - SUPER LIGHT 19</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; touch-action: none; }
@@ -26,8 +26,8 @@
 
         <div id="mainMenu" class="menu">
             <h1 style="color:#ccff00; font-size:25px;">RECORDING MODE</h1>
-            <p style="font-size:10px; margin-bottom:20px;">25 JUEGOS DIFERENTES ACTIVADOS</p>
-            <button class="btn-main" onclick="startGame()">EMPEZAR VIDEO</button>
+            <p style="font-size:10px; margin-bottom:20px;">NIVEL 19: LUZ MAXIMA</p>
+            <button class="btn-main" onclick="startGame()">INICIAR GRABACIÓN</button>
         </div>
 
         <canvas id="c"></canvas>
@@ -112,6 +112,7 @@
 
             ctx.clearRect(0,0,800,450);
             document.getElementById('lvDisp').innerText = level;
+            document.getElementById('sc').innerText = score;
             document.getElementById('modeName').innerText = cfg.n;
 
             let sActual = (cfg.type === "lento") ? speed * 0.5 : (cfg.type === "turbo" ? speed * 1.5 : speed);
@@ -146,42 +147,4 @@
 
             for(let i=obs.length-1; i>=0; i--) {
                 obs[i].x -= (sActual + 2.5);
-                if(obs[i].t === "tunel_transp") ctx.globalAlpha = 0.3;
-                ctx.drawImage(imgF, obs[i].x, obs[i].y, obs[i].w, obs[i].h);
-                ctx.globalAlpha = 1;
-                if(obs[i].x < -200) obs.splice(i, 1);
-            }
-
-            if(frame % 70 === 0) snacks.push({x: 800, y: 150 + Math.random()*150, w: 45, h: 45});
-            for(let i=snacks.length-1; i>=0; i--){
-                snacks[i].x -= sActual;
-                ctx.drawImage(imgG, snacks[i].x, snacks[i].y, snacks[i].w, snacks[i].h);
-                if(scooby.x < snacks[i].x+40 && scooby.x+scooby.w > snacks[i].x && scooby.y < snacks[i].y+40 && scooby.y+scooby.h > snacks[i].y) {
-                    score++; snacks.splice(i,1); sndE.play().catch(()=>{});
-                    document.getElementById('sc').innerText = score;
-                    if(score % 10 === 0) { level++; speed += 0.25; }
-                }
-                if(snacks[i] && snacks[i].x < -100) snacks.splice(i,1);
-            }
-
-            // --- LINTERNA AGRANDADA NIVEL 19 ---
-            if(cfg.type === "linterna") {
-                let darkCanvas = document.createElement('canvas');
-                darkCanvas.width = 800; darkCanvas.height = 450;
-                let dCtx = darkCanvas.getContext('2d');
-                dCtx.fillStyle = 'black'; dCtx.fillRect(0,0,800,450);
-                dCtx.globalCompositeOperation = 'destination-out';
-                // Radio aumentado a 280 para mayor visibilidad
-                let grad = dCtx.createRadialGradient(scooby.x+scooby.w/2, scooby.y+scooby.h/2, 40, scooby.x+scooby.w/2, scooby.y+scooby.h/2, 280);
-                grad.addColorStop(0, 'rgba(0,0,0,1)'); grad.addColorStop(1, 'rgba(0,0,0,0)');
-                dCtx.fillStyle = grad; dCtx.beginPath(); dCtx.arc(scooby.x+scooby.w/2, scooby.y+scooby.h/2, 280, 0, Math.PI*2); dCtx.fill();
-                ctx.drawImage(darkCanvas, 0, 0);
-            }
-
-            ctx.restore();
-            frame++;
-            requestAnimationFrame(animate);
-        }
-    </script>
-</body>
-</html>
+                if(obs[i].t === "
