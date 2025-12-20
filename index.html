@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SCOBY: 25 FINAL GAMES - DARK MODE 19</title>
+    <title>SCOBY: 25 GAMES FINAL FIX</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; touch-action: none; -webkit-user-select: none; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; touch-action: none; }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
         canvas { background: #111; max-width: 100%; max-height: 100%; border: 3px solid #ccff00; }
         * { font-family: 'Press Start 2P', cursive; }
         #ui { position: absolute; top: 10px; width: 92%; display: flex; justify-content: space-between; color: #ccff00; font-size: 10px; z-index: 100; pointer-events: none; text-shadow: 2px 2px #000; }
-        .menu { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; color: white; text-align: center; }
+        .menu { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; color: white; text-align: center; }
         .btn-main { padding: 15px 30px; font-size: 16px; background: #ccff00; border: none; cursor: pointer; color: black; box-shadow: 0 5px 0 #88aa00; }
     </style>
 </head>
@@ -25,9 +25,9 @@
         </div>
 
         <div id="mainMenu" class="menu">
-            <h1 style="color:#ccff00; font-size:30px;">RECORDING FINAL</h1>
-            <p style="font-size:10px; margin-bottom:20px;">MODO LINTERNA EN NIVEL 19</p>
-            <button class="btn-main" onpointerdown="startGame(event)">¡GRABAR!</button>
+            <h1 style="color:#ccff00; font-size:25px;">RECORDING MODE</h1>
+            <p style="font-size:10px; margin-bottom:20px;">25 JUEGOS ÚNICOS LISTOS</p>
+            <button class="btn-main" onclick="startGame()">EMPEZAR JUEGO</button>
         </div>
 
         <canvas id="c"></canvas>
@@ -48,7 +48,7 @@
         const bgM = new Audio('DanLebowitzTiptoeOuttheBack.mp4');
         bgM.loop = true;
 
-        let score = 0, level = 1, speed = 7.0, active = false, frame = 0, gravity = 0.95;
+        let score = 0, level = 1, speed = 7.0, active = false, frame = 0;
         let scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0, opacity: 1 };
         let obs = [], snacks = [], bgX = 0;
 
@@ -71,7 +71,7 @@
             16: { n: "ANCLA", g: 1.5, j: -18, type: "pesado" },
             17: { n: "FLASH RUN", g: 1.0, j: -18, type: "turbo" },
             18: { n: "CÁMARA INESTABLE", g: 0.95, j: -17, type: "vibracion" },
-            19: { n: "LA CUEVA", g: 0.95, j: -17, type: "linterna" }, // NIVEL 19 CAMBIADO
+            19: { n: "LA CUEVA", g: 0.95, j: -17, type: "linterna" },
             20: { n: "TÚNEL MÓVIL", g: 0.40, j: -11, type: "tunel" },
             21: { n: "VIENTO EN CONTRA", g: 0.95, j: -17, type: "viento" },
             22: { n: "INVISIBILIDAD", g: 0.95, j: -17, type: "invisible" },
@@ -80,13 +80,12 @@
             25: { n: "EL GRAN FINAL", g: 0.5, j: -12, type: "tunel" }
         };
 
-        function startGame(e) {
-            if(e) e.stopPropagation();
+        function startGame() {
             active = true; score = 0; level = 1; speed = 7.0; obs = []; snacks = []; frame = 0;
             scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0, opacity: 1 };
             document.getElementById('mainMenu').style.display = 'none';
             bgM.play().catch(()=>{});
-            requestAnimationFrame(animate);
+            animate();
         }
 
         function handleInput() {
@@ -94,4 +93,93 @@
             sndJ.currentTime = 0; sndJ.play().catch(()=>{});
             let m = ((level - 1) % 25) + 1;
             let cfg = gameMap[m];
-            if (cfg.
+            if (["flota", "tunel", "pesado", "tunel_transp", "gigante_scoby", "linterna", "infinito", "techo"].includes(cfg.type)) {
+                scooby.dy = cfg.j;
+            } else {
+                if(scooby.jumps < 2) { scooby.dy = cfg.j; scooby.jumps++; }
+            }
+        }
+
+        window.onpointerdown = (e) => { e.preventDefault(); handleInput(); };
+
+        function animate() {
+            if (!active) return;
+            let m = ((level - 1) % 25) + 1;
+            let cfg = gameMap[m];
+            
+            ctx.save();
+            if(cfg.type === "vibracion") ctx.translate(Math.random()*4-2, Math.random()*4-2);
+
+            ctx.clearRect(0,0,800,450);
+            document.getElementById('lvDisp').innerText = level;
+            document.getElementById('modeName').innerText = cfg.n;
+
+            let sActual = (cfg.type === "lento") ? speed * 0.5 : (cfg.type === "turbo" ? speed * 1.5 : speed);
+            scooby.w = (cfg.type === "gigante_scoby") ? 130 : 75;
+            scooby.h = (cfg.type === "gigante_scoby") ? 130 : 75;
+            
+            scooby.dy += cfg.g;
+            scooby.y += scooby.dy;
+
+            let gl = 450 - scooby.h - 40;
+            if(cfg.type !== "techo") {
+                if(scooby.y > gl) { scooby.y = gl; scooby.dy = 0; scooby.jumps = 0; if(cfg.type === "bounce" || cfg.type === "bounce_forced") scooby.dy = -18; }
+            } else if(scooby.y < 20) { scooby.y = 20; scooby.dy = 0; }
+
+            bgX -= (sActual/2); if(bgX <= -800) bgX = 0;
+            ctx.drawImage(imgB, bgX, 0, 800, 450); ctx.drawImage(imgB, bgX+800, 0, 800, 450);
+
+            if(cfg.type === "psicodelico") ctx.filter = `hue-rotate(${frame*5}deg)`;
+            ctx.globalAlpha = (cfg.type === "invisible") ? (frame % 60 < 30 ? 0.2 : 1) : 1;
+            ctx.drawImage(imgS, scooby.x, scooby.y, scooby.w, scooby.h);
+            ctx.globalAlpha = 1; ctx.filter = "none";
+
+            if(frame % 85 === 0) {
+                let oH = (cfg.type === "gigante_obs") ? 140 : (cfg.type === "gigante_scoby" ? 35 : 60);
+                if (cfg.type.includes("tunel")) {
+                    obs.push({x: 800, y: 0, w: 100, h: 160, t: cfg.type});
+                    obs.push({x: 800, y: 300, w: 100, h: 160, t: cfg.type});
+                } else {
+                    obs.push({x: 800, y: cfg.type === "techo" ? 20 : 410-oH, w: 60, h: oH});
+                }
+            }
+
+            for(let i=obs.length-1; i>=0; i--) {
+                obs[i].x -= (sActual + 2.5);
+                if(obs[i].t === "tunel_transp") ctx.globalAlpha = 0.3;
+                ctx.drawImage(imgF, obs[i].x, obs[i].y, obs[i].w, obs[i].h);
+                ctx.globalAlpha = 1;
+                if(obs[i].x < -200) obs.splice(i, 1);
+            }
+
+            if(frame % 70 === 0) snacks.push({x: 800, y: 150 + Math.random()*150, w: 45, h: 45});
+            for(let i=snacks.length-1; i>=0; i--){
+                snacks[i].x -= sActual;
+                ctx.drawImage(imgG, snacks[i].x, snacks[i].y, snacks[i].w, snacks[i].h);
+                if(scooby.x < snacks[i].x+40 && scooby.x+scooby.w > snacks[i].x && scooby.y < snacks[i].y+40 && scooby.y+scooby.h > snacks[i].y) {
+                    score++; snacks.splice(i,1); sndE.play().catch(()=>{});
+                    document.getElementById('sc').innerText = score;
+                    if(score % 10 === 0) { level++; speed += 0.25; }
+                }
+                if(snacks[i] && snacks[i].x < -100) snacks.splice(i,1);
+            }
+
+            if(cfg.type === "linterna") {
+                let darkCanvas = document.createElement('canvas');
+                darkCanvas.width = 800; darkCanvas.height = 450;
+                let dCtx = darkCanvas.getContext('2d');
+                dCtx.fillStyle = 'black'; dCtx.fillRect(0,0,800,450);
+                dCtx.globalCompositeOperation = 'destination-out';
+                let grad = dCtx.createRadialGradient(scooby.x+scooby.w/2, scooby.y+scooby.h/2, 20, scooby.x+scooby.w/2, scooby.y+scooby.h/2, 150);
+                grad.addColorStop(0, 'rgba(0,0,0,1)'); grad.addColorStop(1, 'rgba(0,0,0,0)');
+                dCtx.fillStyle = grad; dCtx.beginPath(); dCtx.arc(scooby.x+scooby.w/2, scooby.y+scooby.h/2, 150, 0, Math.PI*2); dCtx.fill();
+                ctx.drawImage(darkCanvas, 0, 0);
+            }
+
+            ctx.restore();
+            frame++;
+            requestAnimationFrame(animate);
+        }
+    </script>
+</body>
+</html>
