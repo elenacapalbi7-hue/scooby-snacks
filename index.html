@@ -3,18 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SCOBY: MASTER RECORDING MODE</title>
+    <title>SCOBY: DEFINITIVE RECORDING MODE</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; touch-action: none; -webkit-user-select: none; }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
         canvas { background: #111; max-width: 100%; max-height: 100%; border: 3px solid #ccff00; }
         * { font-family: 'Press Start 2P', cursive; }
-        .title-scoby { font-size: 45px; margin: 0; line-height: 1.2; background: linear-gradient(to bottom, #00BFFF 50%, #FFD700 50%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(4px 4px 0px #000); }
-        .title-level { font-size: 18px; margin: 10px 0 25px 0; background: linear-gradient(to bottom, #FFFFFF 50%, #32CD32 50%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(2px 2px 0px #000); }
         #ui { position: absolute; top: 10px; width: 92%; display: flex; justify-content: space-between; color: #ccff00; font-size: 10px; z-index: 100; pointer-events: none; text-shadow: 2px 2px #000; }
-        .menu { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; color: white; text-align: center; padding: 20px; box-sizing: border-box; }
-        .btn-main { padding: 15px 30px; font-size: 16px; background: #ccff00; border: none; border-radius: 5px; cursor: pointer; color: black; box-shadow: 0 6px 0 #88aa00; margin-top: 10px; }
+        .menu { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; color: white; text-align: center; }
+        .btn-main { padding: 15px 30px; font-size: 16px; background: #ccff00; border: none; cursor: pointer; color: black; }
     </style>
 </head>
 <body>
@@ -23,13 +21,12 @@
         <div id="ui">
             <div>NIVEL: <span id="lvDisp">1</span></div>
             <div>🍪: <span id="sc">0</span></div>
-            <div>GRABANDO...</div>
+            <div>MODO VIDEO</div>
         </div>
 
         <div id="mainMenu" class="menu">
-            <h1 class="title-scoby">SCOBY</h1>
-            <h2 class="title-level">MODO VIDEO</h2>
-            <button class="btn-main" onpointerdown="startGame(event)">EMPEZAR GRABACIÓN</button>
+            <h1 style="font-size:40px;">SCOBY</h1>
+            <button class="btn-main" onpointerdown="startGame(event)">GRABAR JUEGO</button>
         </div>
 
         <canvas id="c"></canvas>
@@ -54,6 +51,35 @@
         let scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0 };
         let obs = [], snacks = [], bgX = 0;
 
+        // --- DEFINICIÓN DE LOS 25 JUEGOS ASIGNADOS ---
+        const levelConfig = {
+            1: { grav: 0.95, jump: -17, type: 'normal' },
+            2: { grav: 0.40, jump: -11, type: 'flotante' },
+            3: { grav: 1.10, jump: -18, type: 'normal' },
+            4: { grav: 0.45, jump: -12, type: 'flotante' },
+            5: { grav: 0.40, jump: -11, type: 'tunel' },
+            6: { grav: 0.95, jump: -17, type: 'normal' },
+            7: { grav: 2.10, jump: -21, type: 'pesado' }, // El que arreglamos
+            8: { grav: 0.60, jump: -13, type: 'flotante' },
+            9: { grav: 1.00, jump: -17, type: 'doble' },
+            10: { grav: 0.40, jump: -11, type: 'tunel' },
+            11: { grav: 1.20, jump: -19, type: 'normal' },
+            12: { grav: 0.50, jump: -12, type: 'flotante' },
+            13: { grav: 0.95, jump: -17, type: 'normal' },
+            14: { grav: 0.40, jump: -11, type: 'flotante' },
+            15: { grav: 0.45, jump: -11, type: 'tunel' },
+            16: { grav: 1.30, jump: -20, type: 'normal' },
+            17: { grav: -0.95, jump: 12, type: 'techo' },
+            18: { grav: 0.55, jump: -12, type: 'flotante' },
+            19: { grav: 0.95, jump: -17, type: 'normal' },
+            20: { grav: 0.50, jump: -11, type: 'tunel' },
+            21: { grav: 0.95, jump: -15, type: 'teleport' },
+            22: { grav: 0.40, jump: -11, type: 'flotante' },
+            23: { grav: 0.95, jump: -17, type: 'lento' },
+            24: { grav: 1.50, jump: -22, type: 'pesado' },
+            25: { grav: 0.45, jump: -11, type: 'tunel' }
+        };
+
         function startGame(e) {
             if(e) e.stopPropagation();
             active = true; score = 0; level = 1; speed = 7; obs = []; snacks = []; frame = 0;
@@ -67,13 +93,18 @@
             if(!active) return;
             sndJ.currentTime = 0; sndJ.play().catch(()=>{});
             let m = ((level - 1) % 25) + 1;
-            
-            // MECÁNICAS DE SALTO ORIGINALES
-            if (m === 17) { scooby.dy = 12; } 
-            else if (m === 21) { scooby.x += 100; if(scooby.x > 500) scooby.x = 80; scooby.dy = -15; }
-            else if ([2, 4, 5, 8, 12, 14, 18, 22].includes(m)) { scooby.dy = -11; } 
-            else if (m === 7) { scooby.dy = -21; } 
-            else { if(scooby.jumps < 2) { scooby.dy = -17; scooby.jumps++; } }
+            let cfg = levelConfig[m];
+
+            if (cfg.type === 'teleport') {
+                scooby.x += 100; if(scooby.x > 500) scooby.x = 80;
+                scooby.dy = cfg.jump;
+            } else if (cfg.type === 'techo') {
+                scooby.dy = cfg.jump;
+            } else if (cfg.type === 'flotante' || cfg.type === 'tunel' || cfg.type === 'pesado') {
+                scooby.dy = cfg.jump;
+            } else {
+                if(scooby.jumps < 2) { scooby.dy = cfg.jump; scooby.jumps++; }
+            }
         }
 
         window.onpointerdown = (e) => { if(active) { e.preventDefault(); handleInput(); } };
@@ -82,34 +113,34 @@
             if (!active) return;
             ctx.clearRect(0,0,800,450);
             let m = ((level - 1) % 25) + 1;
+            let cfg = levelConfig[m];
             document.getElementById('lvDisp').innerText = level;
 
-            // GRAVEDADES ORIGINALES
-            if ([2, 4, 5, 8, 12, 14, 18, 22].includes(m)) { gravity = 0.4; } 
-            else if (m === 7) { gravity = 2.1; } 
-            else if (m === 17) { gravity = -0.95; } 
-            else { gravity = 0.95; } 
-
-            let curSpeed = (m === 23) ? speed * 0.5 : speed;
+            gravity = cfg.grav;
+            let curSpeed = (cfg.type === 'lento') ? speed * 0.5 : speed;
+            
             scooby.dy += gravity;
             scooby.y += scooby.dy;
 
             let gl = 450 - scooby.h - 40;
-            if(m !== 17 && scooby.y > gl) { scooby.y = gl; scooby.dy = 0; scooby.jumps = 0; }
-            if(m === 17 && scooby.y < 20) { scooby.y = 20; scooby.dy = 0; scooby.jumps = 0; }
+            if(cfg.type !== 'techo' && scooby.y > gl) { scooby.y = gl; scooby.dy = 0; scooby.jumps = 0; }
+            if(cfg.type === 'techo' && scooby.y < 20) { scooby.y = 20; scooby.dy = 0; scooby.jumps = 0; }
 
             bgX -= (curSpeed/2); if(bgX <= -800) bgX = 0;
             ctx.drawImage(imgB, bgX, 0, 800, 450); ctx.drawImage(imgB, bgX+800, 0, 800, 450);
             ctx.drawImage(imgS, scooby.x, scooby.y, scooby.w, scooby.h);
 
-            // OBSTÁCULOS ORIGINALES
+            // OBSTÁCULOS SEGÚN EL TIPO DE JUEGO ASIGNADO
             if(frame % 85 === 0) {
-                if ([5, 10, 15, 20, 25].includes(m)) { 
+                if (cfg.type === 'tunel') {
                     obs.push({x: 800, y: 0, w: 100, h: 150});
                     obs.push({x: 800, y: 300, w: 100, h: 150});
+                } else if (cfg.type === 'doble') {
+                    obs.push({x: 800, y: 335, w: 60, h: 60});
+                    obs.push({x: 1000, y: 335, w: 60, h: 60});
                 } else {
-                    let hF = (m === 7) ? 40 : 60;
-                    let yF = (m === 17) ? 20 : (m === 7 ? 370 : 335);
+                    let hF = (cfg.type === 'pesado') ? 40 : 60;
+                    let yF = (cfg.type === 'techo') ? 20 : (cfg.type === 'pesado' ? 370 : 335);
                     obs.push({x: 800, y: yF, w: 60, h: hF});
                 }
             }
@@ -117,7 +148,7 @@
             for(let i=obs.length-1; i>=0; i--) {
                 obs[i].x -= (curSpeed + 2.5);
                 ctx.drawImage(imgF, obs[i].x, obs[i].y, obs[i].w, obs[i].h);
-                // COLISIÓN DESACTIVADA (MODO DIOS)
+                // INMORTAL: Colisión desactivada para el video
                 if(obs[i].x < -150) obs.splice(i, 1);
             }
 
@@ -129,7 +160,8 @@
                     score++; snacks.splice(i,1); sndE.play().catch(()=>{});
                     document.getElementById('sc').innerText = score;
                     if(score % 10 === 0) { 
-                        level++; speed += 0.15; 
+                        level++; 
+                        speed += 0.15; // Velocidad real para jugadores
                         if(level > 25 && level % 5 === 0) speed += 0.40;
                     }
                 }
