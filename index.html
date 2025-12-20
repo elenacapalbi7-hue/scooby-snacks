@@ -93,13 +93,13 @@
         function handleInput() {
             if(!active) return;
             sndJ.currentTime = 0; sndJ.play().catch(()=>{});
-            let mechanic = ((level - 1) % 25) + 1;
             
-            // CORRECCIÓN: Salto más fuerte en modo pesado (7)
-            if (mechanic === 17) { scooby.dy = 12; } 
-            else if (mechanic === 21) { scooby.x += 100; if(scooby.x > 500) scooby.x = 80; scooby.dy = -15; }
-            else if (mechanic === 7) { scooby.dy = -18; } // Salto extra para compensar peso
-            else if (mechanic === 2 || mechanic === 4) { scooby.dy = -10; }
+            // Lógica de saltos original para todos los niveles
+            if (level === 17) { scooby.dy = 12; } 
+            else if (level === 21) { scooby.x += 100; if(scooby.x > 500) scooby.x = 80; scooby.dy = -15; }
+            else if (level === 2 || level === 4) { scooby.dy = -10; }
+            // Arreglo específico para el salto en nivel 7
+            else if (level === 7) { scooby.dy = -20; } 
             else { if(scooby.jumps < 2) { scooby.dy = -17; scooby.jumps++; } }
         }
 
@@ -108,30 +108,30 @@
         function animate() {
             if (!active) return;
             ctx.clearRect(0,0,800,450);
-            let mechanic = ((level - 1) % 25) + 1;
 
-            if (mechanic === 2) { document.getElementById('modeName').innerText = "SUBMARINO"; gravity = 0.3; }
-            else if (mechanic === 7) { document.getElementById('modeName').innerText = "PESADO"; gravity = 2.0; } // Bajado de 2.4 a 2.0
-            else if (mechanic === 17) { document.getElementById('modeName').innerText = "TECHO"; gravity = -0.95; }
+            // Modos de juego originales
+            if (level === 2) { document.getElementById('modeName').innerText = "SUBMARINO"; gravity = 0.3; }
+            else if (level === 7) { document.getElementById('modeName').innerText = "PESADO"; gravity = 2.1; } 
+            else if (level === 17) { document.getElementById('modeName').innerText = "TECHO"; gravity = -0.95; }
             else { document.getElementById('modeName').innerText = "PIXEL RUN"; gravity = 0.95; }
 
-            let currentSpeed = (mechanic === 23) ? speed * 0.5 : speed;
+            let currentSpeed = (level === 23) ? speed * 0.5 : speed;
             scooby.dy += gravity;
             scooby.y += scooby.dy;
 
             let groundLimit = 450 - scooby.h - 40;
-            if(mechanic !== 17 && scooby.y > groundLimit) { scooby.y = groundLimit; scooby.dy = 0; scooby.jumps = 0; }
-            if(mechanic === 17 && scooby.y < 20) { scooby.y = 20; scooby.dy = 0; scooby.jumps = 0; }
+            if(level !== 17 && scooby.y > groundLimit) { scooby.y = groundLimit; scooby.dy = 0; scooby.jumps = 0; }
+            if(level === 17 && scooby.y < 20) { scooby.y = 20; scooby.dy = 0; scooby.jumps = 0; }
 
             bgX -= (currentSpeed/2); if(bgX <= -800) bgX = 0;
             ctx.drawImage(imgB, bgX, 0, 800, 450); ctx.drawImage(imgB, bgX+800, 0, 800, 450);
             ctx.drawImage(imgS, scooby.x, scooby.y, scooby.w, scooby.h);
 
             if(frame % 85 === 0) {
-                // CORRECCIÓN: Fantasmas más bajos en el modo pesado para poder saltarlos
-                let hF = (mechanic === 7) ? 45 : 60;
-                let wF = (mechanic === 7) ? 55 : 60;
-                let yF = (mechanic === 17) ? 20 : (mechanic === 7 ? 365 : 335);
+                // Fantasma ajustado SOLO para el nivel 7
+                let hF = (level === 7) ? 40 : 60;
+                let wF = (level === 7) ? 50 : 60;
+                let yF = (level === 17) ? 20 : (level === 7 ? 370 : 335);
                 obs.push({x: 800, y: yF, w: wF, h: hF});
             }
 
@@ -139,7 +139,6 @@
                 obs[i].x -= (currentSpeed + 2.5);
                 ctx.drawImage(imgF, obs[i].x, obs[i].y, obs[i].w, obs[i].h);
                 
-                // Hitbox más generosa (puedes rozarlos un poco más)
                 if(scooby.x+20 < obs[i].x+obs[i].w-20 && 
                    scooby.x+scooby.w-20 > obs[i].x+20 && 
                    scooby.y+20 < obs[i].y+obs[i].h-10 && 
@@ -155,7 +154,7 @@
                 if(scooby.x < snacks[i].x+40 && scooby.x+scooby.w > snacks[i].x && scooby.y < snacks[i].y+40 && scooby.y+scooby.h > snacks[i].y) {
                     score++; snacks.splice(i,1); sndE.play().catch(()=>{});
                     document.getElementById('sc').innerText = score;
-                    if(score % 10 === 0) level++;
+                    if(score % 10 === 0) { level++; speed += 0.2; }
                 }
                 if(snacks[i] && snacks[i].x < -100) snacks.splice(i,1);
             }
