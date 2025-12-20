@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SCOBY: MODO GRABACIÓN</title>
+    <title>SCOBY: MASTER RECORDING MODE</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; touch-action: none; -webkit-user-select: none; }
@@ -12,14 +12,9 @@
         * { font-family: 'Press Start 2P', cursive; }
         .title-scoby { font-size: 45px; margin: 0; line-height: 1.2; background: linear-gradient(to bottom, #00BFFF 50%, #FFD700 50%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(4px 4px 0px #000); }
         .title-level { font-size: 18px; margin: 10px 0 25px 0; background: linear-gradient(to bottom, #FFFFFF 50%, #32CD32 50%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(2px 2px 0px #000); }
-        .phrase-container { position: relative; max-width: 85%; margin-bottom: 30px; }
-        .scooby-mini { position: absolute; top: -45px; right: -10px; width: 60px; transform: rotate(10deg); }
-        .instrucciones { color: #fff; font-size: 10px; line-height: 1.8; text-shadow: 2px 2px #000; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; border: 2px solid #555; }
         #ui { position: absolute; top: 10px; width: 92%; display: flex; justify-content: space-between; color: #ccff00; font-size: 10px; z-index: 100; pointer-events: none; text-shadow: 2px 2px #000; }
         .menu { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; color: white; text-align: center; padding: 20px; box-sizing: border-box; }
         .btn-main { padding: 15px 30px; font-size: 16px; background: #ccff00; border: none; border-radius: 5px; cursor: pointer; color: black; box-shadow: 0 6px 0 #88aa00; margin-top: 10px; }
-        .btn-main:active { transform: translateY(4px); box-shadow: none; }
-        .high-score-label { color: #FFD700; margin-top: 15px; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -28,26 +23,13 @@
         <div id="ui">
             <div>NIVEL: <span id="lvDisp">1</span></div>
             <div>🍪: <span id="sc">0</span></div>
-            <div>TOP: <span id="hi">0</span></div>
+            <div>GRABANDO...</div>
         </div>
 
         <div id="mainMenu" class="menu">
             <h1 class="title-scoby">SCOBY</h1>
-            <h2 class="title-level">LEVEL-UP COOKIES</h2>
-            <div class="phrase-container">
-                <img src="4d0e8e93e8663b020f6063451e53118a.png" class="scooby-mini">
-                <p class="instrucciones">
-                    "¡Scooby-Dooby-Doo! Sigue saltando, esquiva los fantasmas y recolecta esas mini cookies — lárgate de un nivel a otro cada vez que comas 10 mini cookies. ¡Ruh-roh si te atrapa un fantasma antes!"
-                </p>
-            </div>
-            <button class="btn-main" onpointerdown="startGame(event)">¡MODO VIDEO!</button>
-            <div class="high-score-label">RÉCORD: <span id="mainHi">0</span></div>
-        </div>
-
-        <div id="deathMenu" class="menu" style="display:none;">
-            <h1 style="color:red; font-size: 25px;">¡GAME OVER!</h1>
-            <h2 id="finalScore" style="font-size: 40px; color:#ccff00;">0</h2>
-            <button class="btn-main" onpointerdown="startGame(event)">REINTENTAR</button>
+            <h2 class="title-level">MODO VIDEO</h2>
+            <button class="btn-main" onpointerdown="startGame(event)">EMPEZAR GRABACIÓN</button>
         </div>
 
         <canvas id="c"></canvas>
@@ -72,84 +54,76 @@
         let scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0 };
         let obs = [], snacks = [], bgX = 0;
 
-        let highScore = localStorage.getItem('scobyHighScore') || 0;
-        document.getElementById('hi').innerText = highScore;
-        document.getElementById('mainHi').innerText = highScore;
-
         function startGame(e) {
             if(e) e.stopPropagation();
             active = true; score = 0; level = 1; speed = 7; obs = []; snacks = []; frame = 0;
             scooby = { x: 80, y: 330, w: 75, h: 75, dy: 0, jumps: 0 };
             document.getElementById('mainMenu').style.display = 'none';
-            document.getElementById('deathMenu').style.display = 'none';
-            document.getElementById('sc').innerText = "0";
-            document.getElementById('lvDisp').innerText = "1";
-            bgM.currentTime = 0; bgM.play().catch(()=>{});
+            bgM.play().catch(()=>{});
             requestAnimationFrame(animate);
         }
 
         function handleInput() {
             if(!active) return;
             sndJ.currentTime = 0; sndJ.play().catch(()=>{});
-            let mechanic = ((level - 1) % 25) + 1;
-            if (mechanic === 17) { scooby.dy = 12; } 
-            else if (mechanic === 21) { scooby.x += 100; if(scooby.x > 500) scooby.x = 80; scooby.dy = -15; }
-            else if (mechanic === 5 || mechanic === 2 || mechanic === 4) { scooby.dy = -11; }
-            else if (mechanic === 7) { scooby.dy = -21; } 
+            let m = ((level - 1) % 25) + 1;
+            
+            // MECÁNICAS DE SALTO ORIGINALES
+            if (m === 17) { scooby.dy = 12; } 
+            else if (m === 21) { scooby.x += 100; if(scooby.x > 500) scooby.x = 80; scooby.dy = -15; }
+            else if ([2, 4, 5, 8, 12, 14, 18, 22].includes(m)) { scooby.dy = -11; } 
+            else if (m === 7) { scooby.dy = -21; } 
             else { if(scooby.jumps < 2) { scooby.dy = -17; scooby.jumps++; } }
         }
 
-        window.onpointerdown = (e) => { if(active && e.target.tagName !== 'BUTTON') { e.preventDefault(); handleInput(); } };
+        window.onpointerdown = (e) => { if(active) { e.preventDefault(); handleInput(); } };
 
         function animate() {
             if (!active) return;
             ctx.clearRect(0,0,800,450);
-            let mechanic = ((level - 1) % 25) + 1;
+            let m = ((level - 1) % 25) + 1;
             document.getElementById('lvDisp').innerText = level;
 
-            if (mechanic === 5 || mechanic === 2) { gravity = 0.4; }
-            else if (mechanic === 7) { gravity = 2.1; } 
-            else if (mechanic === 17) { gravity = -0.95; }
-            else { gravity = 0.95; }
+            // GRAVEDADES ORIGINALES
+            if ([2, 4, 5, 8, 12, 14, 18, 22].includes(m)) { gravity = 0.4; } 
+            else if (m === 7) { gravity = 2.1; } 
+            else if (m === 17) { gravity = -0.95; } 
+            else { gravity = 0.95; } 
 
-            let currentSpeed = (mechanic === 23) ? speed * 0.5 : speed;
+            let curSpeed = (m === 23) ? speed * 0.5 : speed;
             scooby.dy += gravity;
             scooby.y += scooby.dy;
 
-            let groundLimit = 450 - scooby.h - 40;
-            if(mechanic !== 17 && scooby.y > groundLimit) { scooby.y = groundLimit; scooby.dy = 0; scooby.jumps = 0; }
-            if(mechanic === 17 && scooby.y < 20) { scooby.y = 20; scooby.dy = 0; scooby.jumps = 0; }
+            let gl = 450 - scooby.h - 40;
+            if(m !== 17 && scooby.y > gl) { scooby.y = gl; scooby.dy = 0; scooby.jumps = 0; }
+            if(m === 17 && scooby.y < 20) { scooby.y = 20; scooby.dy = 0; scooby.jumps = 0; }
 
-            bgX -= (currentSpeed/2); if(bgX <= -800) bgX = 0;
+            bgX -= (curSpeed/2); if(bgX <= -800) bgX = 0;
             ctx.drawImage(imgB, bgX, 0, 800, 450); ctx.drawImage(imgB, bgX+800, 0, 800, 450);
             ctx.drawImage(imgS, scooby.x, scooby.y, scooby.w, scooby.h);
 
+            // OBSTÁCULOS ORIGINALES
             if(frame % 85 === 0) {
-                if (mechanic === 5) {
+                if ([5, 10, 15, 20, 25].includes(m)) { 
                     obs.push({x: 800, y: 0, w: 100, h: 150});
                     obs.push({x: 800, y: 300, w: 100, h: 150});
                 } else {
-                    let hF = (mechanic === 7) ? 40 : 60;
-                    let wF = (mechanic === 7) ? 50 : 60;
-                    let yF = (mechanic === 17) ? 20 : (mechanic === 7 ? 370 : 335);
-                    obs.push({x: 800, y: yF, w: wF, h: hF});
+                    let hF = (m === 7) ? 40 : 60;
+                    let yF = (m === 17) ? 20 : (m === 7 ? 370 : 335);
+                    obs.push({x: 800, y: yF, w: 60, h: hF});
                 }
             }
 
             for(let i=obs.length-1; i>=0; i--) {
-                obs[i].x -= (currentSpeed + 2.5);
+                obs[i].x -= (curSpeed + 2.5);
                 ctx.drawImage(imgF, obs[i].x, obs[i].y, obs[i].w, obs[i].h);
-                
-                // --- MODO DIOS ACTIVADO ---
-                // Se ha comentado la colisión para que no pierdas durante la grabación
-                /* if(scooby.x+20 < obs[i].x+obs[i].w-20 && scooby.x+scooby.w-20 > obs[i].x+20 && scooby.y+20 < obs[i].y+obs[i].h-15 && scooby.y+scooby.h-15 > obs[i].y+15) endGame(); */
-                
+                // COLISIÓN DESACTIVADA (MODO DIOS)
                 if(obs[i].x < -150) obs.splice(i, 1);
             }
 
             if(frame % 70 === 0) snacks.push({x: 800, y: 150 + Math.random()*150, w: 45, h: 45});
             for(let i=snacks.length-1; i>=0; i--){
-                snacks[i].x -= currentSpeed;
+                snacks[i].x -= curSpeed;
                 ctx.drawImage(imgG, snacks[i].x, snacks[i].y, snacks[i].w, snacks[i].h);
                 if(scooby.x < snacks[i].x+40 && scooby.x+scooby.w > snacks[i].x && scooby.y < snacks[i].y+40 && scooby.y+scooby.h > snacks[i].y) {
                     score++; snacks.splice(i,1); sndE.play().catch(()=>{});
@@ -163,12 +137,6 @@
             }
             frame++;
             if(active) requestAnimationFrame(animate);
-        }
-
-        function endGame() {
-            active = false; bgM.pause();
-            document.getElementById('finalScore').innerText = score;
-            document.getElementById('deathMenu').style.display = 'flex';
         }
     </script>
 </body>
